@@ -1,0 +1,43 @@
+NOTICE / Attribution and terms for nvngx_vsr.dll
+=================================================
+
+This application uses the NVIDIA RTX Video SDK. The bundled nvngx_vsr.dll is
+subject to the NVIDIA RTX SDKs LICENSE: no reverse engineering, no removal of
+notices, no stand-alone distribution/sale/sublicense, provided "AS IS",
+no use in life-critical applications, and compliance with U.S. export laws.
+NVIDIA and NVIDIA RTX are trademarks or registered trademarks of NVIDIA
+Corporation in the U.S. and other countries. This application is an
+independent work and is not provided, endorsed or approved by NVIDIA.
+
+The source code and the application itself are released under the MIT License
+(see LICENSE). The MIT License does not apply to nvngx_vsr.dll. This repository
+does not contain the NVIDIA RTX Video SDK or nvngx_vsr.dll. To build the
+application you must obtain the SDK from NVIDIA and accept its license.
+
+---
+[日本語]
+■ 使用している技術
+本アプリは NVIDIA RTX Video SDK（超解像）を使用しています。
+同梱の nvngx_vsr.dll は NVIDIA の著作物です。
+NVIDIA、NVIDIA RTX は、米国およびその他の国における NVIDIA Corporation の
+商標または登録商標です。本アプリは個人が作ったもので、NVIDIA が提供・推奨・
+承認したものではありません。
+
+■ このアプリのライセンス
+ソースコードとアプリ本体は MIT License で公開しています(LICENSE を参照)。
+MIT License は nvngx_vsr.dll には適用されません。このリポジトリには NVIDIA RTX Video SDK
+も nvngx_vsr.dll も含まれていません。ビルドするときは、SDK を NVIDIA から入手し、
+その使用許諾に同意してください。
+
+■ nvngx_vsr.dll の利用条件
+この DLL は「NVIDIA RTX SDKs LICENSE」（SDK に同梱のライセンス全文）の条件に従います。
+主なものは次のとおりです。
+
+- 逆コンパイル・逆アセンブル・リバースエンジニアリングをしないこと。
+  著作権表示などを取り除かないこと
+- DLL を単体で配布・販売・貸与・サブライセンスしないこと
+  （本アプリの一部として使う目的に限る）
+- 現状のまま提供され、保証はありません。NVIDIA はこの DLL の利用による
+  損害の責任を負いません
+- 人の生命に関わる用途（医療・航空・軍事など）では使わないこと
+- 米国の輸出管理の法令に従うこと

@@ -1,0 +1,51 @@
+MIT License
+
+Copyright (c) 2026 Nanakagi
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+Exceptions / 例外
+
+1. NVIDIA's nvngx_vsr.dll (not included in this repository, but bundled with the
+   released HiResLoupe.zip) is part of the NVIDIA RTX Video SDK. It is NOT covered
+   by the MIT License above. Follow NVIDIA's terms (see NOTICE.txt).
+   NVIDIA の nvngx_vsr.dll(このリポジトリには含まれませんが、配布する HiResLoupe.zip
+   には同梱されます)は NVIDIA RTX Video SDK の一部で、上の MIT License の対象外です。
+   NVIDIA の条件に従ってください(NOTICE.txt を参照)。
+
+2. Logo.png and assets/HiResLoupe.ico (the logo and icon) are not covered by the MIT
+   License. You may use them to introduce this software (articles, videos, social
+   media, etc.), but not for other purposes without the author's permission.
+   Logo.png と assets/HiResLoupe.ico(ロゴとアイコン)は MIT License の対象外です。
+   このソフトを紹介する目的(記事・動画・SNS など)には使えます。それ以外の目的では、
+   作者の許可を取ってください。
+
+---
+
+[日本語の要約 / Summary in Japanese — 法的な効力があるのは上の英文です]
+
+- このソフトのソースコードと、ビルドしたアプリは、MIT License で公開しています。
+  使う・コピーする・改造する・再配布する・販売することが、著作権表示とこの許諾文を
+  残す限り、自由にできます。
+- 無保証です。このソフトを使って生じた損害に、作者は責任を負いません。
+- 同梱の nvngx_vsr.dll は NVIDIA の条件に従います(MIT の対象外)。
+- ロゴとアイコンは、紹介の目的で使えます(MIT の対象外)。
+- 任意の寄付(ドネーション)は歓迎します。寄付をしても、この許諾の内容は変わりません。

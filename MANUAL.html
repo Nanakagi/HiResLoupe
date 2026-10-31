@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HiResLoupe Manual / 高解像ルーペ 使い方</title>
+<style>
+body{font-family:"Segoe UI","Yu Gothic UI","Meiryo",sans-serif;line-height:1.8;max-width:760px;margin:2em auto;padding:0 1em;color:#222;background:#fff}
+h1{font-size:1.6em;border-bottom:2px solid #ccc;padding-bottom:.3em}
+h2{font-size:1.3em;margin-top:2em;border-bottom:1px solid #ddd}
+h3{font-size:1.1em;margin-top:1.6em}
+code{background:#eee;border-radius:3px;padding:.1em .4em;font-family:Consolas,monospace}
+ul{padding-left:1.4em}
+pre{background:#eee;border-radius:4px;padding:.6em 1em;overflow-x:auto}pre code{background:none;padding:0}
+pre{background:#eee;border-radius:4px;padding:.6em 1em;overflow-x:auto}pre code{background:none;padding:0}
+hr{border:0;border-top:1px solid #ccc;margin:2em 0}
+a{color:#0b5cad}
+@media (prefers-color-scheme:dark){body{color:#ddd;background:#1e1e1e}h1,h2{border-color:#444}code,pre{background:#333}a{color:#6cb2ff}hr{border-color:#444}}
+</style>
+</head>
+<body>
+<h1>HiResLoupe Manual / 高解像ルーペ 使い方</h1>
+<p><a href="#en">English</a> | <a href="#ja">日本語</a></p>
+<hr>
+<a id="en"></a>
+<h2>English</h2>
+<p>A tool that magnifies the desktop screen around the mouse pointer in real time, enhancing it to high resolution as it goes.<br>
+Magnification uses the super resolution of the NVIDIA RTX Video SDK.</p>
+<p>No installer: unzip the folder and run <code>HiResLoupe.exe</code>.</p>
+<h3>Requirements</h3>
+<ul>
+<li>Windows 11 / an NVIDIA RTX series GPU</li>
+<li><code>nvngx_vsr.dll</code> and <code>HiResLoupe.ini</code> in the same folder as <code>HiResLoupe.exe</code></li>
+</ul>
+<h3>Start and quit</h3>
+<ul>
+<li><strong>Start</strong>: Double-click <code>HiResLoupe.exe</code> (the loupe appears right away; the app stays in the system tray)</li>
+<li><strong>Show / hide the loupe</strong>: <code>Win</code> + <code>Alt</code> + <code>Z</code>, or left-click the tray icon</li>
+<li><strong>Hide the loupe only</strong>: <code>Esc</code> or right-click</li>
+<li><strong>Quit completely</strong>: Right-click the tray icon, then "Quit" (menu names below are shown in English; they change with the selected language)</li>
+<li><strong>Start with Windows</strong>: Right-click the tray icon, then check "Start with Windows"; select it again to remove. After you sign in, the app stays in the tray without showing the loupe; press <code>Win</code> + <code>Alt</code> + <code>Z</code> to show it. No installer or administrator rights are needed. If you move <code>HiResLoupe.exe</code>, run it once from the new location to update the registration.</li>
+</ul>
+<h3>Removing the app</h3>
+<p>Quit the app from the tray menu, turn off "Start with Windows" if you had turned it on, then delete the folder.</p>
+<p>If you delete the folder without turning it off, an entry named "HiResLoupe" stays in the startup list. It does no harm: if you use the app again, that entry is simply reused.</p>
+<h3>Controls</h3>
+<ul>
+<li><strong>Change magnification</strong>: Wheel down: +25%, wheel up: -25% (100-400%, 200% at first)</li>
+<li><strong>Move the cursor freely</strong>: Hold <code>Ctrl</code> (free mode)</li>
+<li><strong>Resize the loupe</strong>: <code>Ctrl</code> + wheel (down: larger, up: smaller)</li>
+<li><strong>Resize by dragging the frame</strong>: Hold <code>Ctrl</code> and drag the frame of the loupe</li>
+<li><strong>Shape presets</strong>: <code>1</code> = square / <code>2</code> = wide 16:9 / <code>3</code> = tall 16:9</li>
+</ul>
+<ul>
+<li>Clicks pass through the loupe to the app underneath. The wheel and the number keys <code>1</code> to <code>3</code> are used for the loupe while it is shown.</li>
+<li>When the mouse moves to another monitor, the loupe moves to that monitor too.</li>
+</ul>
+<h3>Settings</h3>
+<p>Open <code>HiResLoupe.ini</code> in Notepad (or use "Open settings file" in the tray menu).<br>
+After editing and saving, right-click the tray icon and choose "Reload settings". The loupe is closed and shown again with the new settings, so there is no need to restart the app.</p>
+<p>You can change: the start key / the initial magnification and its upper limit / the loupe size / the frame (on/off and width)</p>
+<p><strong>Menu language</strong>: Right-click the tray icon, then "Language" to choose English, Japanese, Simplified Chinese or Korean. The first time, the language follows your Windows display language (English if it is none of these); your choice is saved in <code>HiResLoupe.ini</code>. To change individual texts, fill in <code>[text]</code> in the same file and choose "Reload settings". Empty entries keep the selected language. Save the file as UTF-8 or ANSI.</p>
+<pre><code>[text]
+show_loupe=Show loupe
+hide_loupe=Hide loupe
+open_settings_file=Open settings file
+reload_settings=Reload settings
+open_log=Open log
+start_with_windows=Start with Windows
+language=Language
+quit=Quit
+tray_tooltip=HiResLoupe (Win+Alt+Z)</code></pre>
+<ul>
+<li>Each key is named after the English menu item it changes. <code>show_loupe</code> is the menu text while the loupe is hidden, and <code>hide_loupe</code> while it is visible.</li>
+<li><code>language</code> is the name of the "Language" item, and <code>tray_tooltip</code> is the text shown when you hover over the tray icon.</li>
+<li>Do not write notes after a value on the same line; everything to the end of the line is read as the text.</li>
+</ul>
+<h3>Troubleshooting</h3>
+<ul>
+<li>**The loupe does not appear with <code>Win</code> + <code>Alt</code> + <code>Z</code>**: Another app is using the same key. Change <code>[hotkey]</code> in <code>HiResLoupe.ini</code> to another key. You can also left-click the tray icon to show it.</li>
+<li><strong>Edges look blurry</strong>: Super resolution does not work at low magnification. Use 175% or higher.</li>
+<li><strong>It runs strangely</strong>: Set <code>log_timing</code> to <code>1</code> in <code>HiResLoupe.ini</code>, start the app, then open <code>HiResLoupe.log</code> from "Open log" in the tray menu. (The log is written in Japanese.)</li>
+</ul>
+<h3>License and notices</h3>
+<p>The source code and the app are released under the MIT License. <code>nvngx_vsr.dll</code> follows NVIDIA's terms. Please read <code>LICENSE</code> and <code>NOTICE.txt</code>.</p>
+<p>This app uses the NVIDIA RTX Video SDK. NVIDIA and NVIDIA RTX are trademarks or registered trademarks of NVIDIA Corporation.<br>
+This app is an independent work and is not provided, endorsed or approved by NVIDIA.</p>
+<hr>
+<a id="ja"></a>
+<h2>日本語</h2>
+<p>マウスの位置を中心にデスクトップ画面をリアルタイムで高解像度補正しながら拡大して見るツールです。<br>
+拡大には NVIDIA RTX Video SDK の超解像を使います。</p>
+<p>インストールは要りません。zip を展開して <code>HiResLoupe.exe</code> を起動するだけで使えます。</p>
+<h3>必要なもの</h3>
+<ul>
+<li>Windows 11 / NVIDIA RTX シリーズの GPU</li>
+<li><code>HiResLoupe.exe</code> と同じフォルダに <code>nvngx_vsr.dll</code> と <code>HiResLoupe.ini</code></li>
+</ul>
+<h3>起動・終了</h3>
+<ul>
+<li><strong>起動</strong>: <code>HiResLoupe.exe</code> をダブルクリック(すぐルーペが出ます。タスクトレイに常駐します)</li>
+<li><strong>ルーペを出す / 消す</strong>: <code>Win</code> + <code>Alt</code> + <code>Z</code>、またはトレイのアイコンを左クリック</li>
+<li><strong>ルーペだけ消す</strong>: <code>Esc</code> または右クリック</li>
+<li><strong>完全に終了</strong>: トレイのアイコンを右クリック →「アプリを終了」</li>
+<li><strong>Windows と同時に起動する</strong>: トレイのアイコンを右クリック →「Windows と同時に起動」にチェックを入れる(もう一度押すと解除)。パソコンを起動すると、ルーペは出さずにトレイに常駐します。ルーペは <code>Win</code> + <code>Alt</code> + <code>Z</code> で出せます。インストールや管理者権限は要りません。<code>HiResLoupe.exe</code> を別の場所へ移したときは、新しい場所で一度起動すると登録が更新されます。</li>
+</ul>
+<h3>アプリを削除するとき</h3>
+<p>トレイメニューからアプリを終了し、自動起動をオンにしていた場合はオフにしてから、フォルダごと削除してください。</p>
+<p>オフにせずにフォルダを消した場合、スタートアップに「HiResLoupe」という登録が残りますが、害はありません。再びこのアプリを使ったときに、その設定が再利用されるだけです。</p>
+<h3>操作</h3>
+<ul>
+<li><strong>倍率を変える</strong>: ホイールを下へ回すと +25%、上へ回すと -25%(100〜400%、最初は 200%)</li>
+<li><strong>ルーペの大きさを変える</strong>: <code>Ctrl</code> + ホイール(下で大きく、上で小さく)</li>
+<li><strong>カーソルを自由に動かす</strong>: <code>Ctrl</code> を押しっぱなしにする(フリーモード)</li>
+<li><strong>枠をつかんで大きさを変える</strong>: <code>Ctrl</code> を押しながら、ルーペの枠をドラッグ</li>
+<li><strong>形のテンプレート</strong>: <code>1</code> = 正方形 / <code>2</code> = 横長 16:9 / <code>3</code> = 縦長 16:9</li>
+</ul>
+<ul>
+<li>ルーペが出ている間も、クリックは下のアプリに通ります。ただしホイールと数字キー <code>1</code>〜<code>3</code> はルーペの操作に使われます。</li>
+<li>マウスが別のモニターへ移ると、ルーペもそのモニターへ移ります。</li>
+</ul>
+<h3>設定</h3>
+<p><code>HiResLoupe.ini</code> をメモ帳で開いて直します(トレイのメニュー「設定ファイルを開く」でも開けます)。<br>
+直して保存したら、トレイのアイコンを右クリック →「設定を再読み込み」を選びます。ルーペを一度閉じて新しい設定で出し直すので、アプリを起動し直す必要はありません。</p>
+<p>変えられるもの: 起動キー / 最初の倍率と上限 / ルーペの大きさ / 枠の有無と太さ</p>
+<p><strong>メニューの言語</strong>: トレイのアイコンを右クリック →「言語」(Language)で、English / 日本語 / 中文(简体) / 한국어 を選べます。最初は Windows の表示言語に合わせます(この4つ以外は英語)。選んだ言語は <code>HiResLoupe.ini</code> に保存されます。文字を個別に変えたいときは、同じファイルの <code>[text]</code> に書いて、「設定を再読み込み」を選びます。空欄は選んだ言語のままです。文字コードは UTF-8 でも ANSI でも構いません。</p>
+<pre><code>[text]
+show_loupe=ルーペを出す
+hide_loupe=ルーペを消す
+open_settings_file=設定ファイルを開く
+reload_settings=設定を再読み込み
+open_log=ログを開く
+start_with_windows=Windows と同時に起動
+language=言語
+quit=アプリを終了
+tray_tooltip=高解像ルーペ (Win+Alt+Z)</code></pre>
+<ul>
+<li>キーの名前は、変えるメニュー項目の英語名です。<code>show_loupe</code> はルーペが消えているとき、<code>hide_loupe</code> はルーペが出ているときのメニューの文字です。</li>
+<li><code>language</code> は「言語」の項目の名前、<code>tray_tooltip</code> はトレイのアイコンにマウスを重ねたときの文字です。</li>
+<li>項目の右に説明を書かないでください(行の終わりまで文字として読まれます)。</li>
+</ul>
+<h3>困ったとき</h3>
+<ul>
+<li>**<code>Win</code> + <code>Alt</code> + <code>Z</code> で出ない**: 他のアプリが同じキーを使っています。<code>HiResLoupe.ini</code> の <code>[hotkey]</code> を別のキーに変えてください。また、トレイのアイコンを左クリックすれば出せます。</li>
+<li><strong>輪郭がくっきりしない</strong>: 倍率が低いと超解像が働きません。175% 以上にしてください。</li>
+<li><strong>動きがおかしい</strong>: <code>HiResLoupe.ini</code> の <code>log_timing</code> を <code>1</code> にして起動し、トレイの「ログを開く」で <code>HiResLoupe.log</code> を見てください。</li>
+</ul>
+<h3>ライセンス・表記</h3>
+<p>ソースコードとアプリ本体は MIT License で公開しています。<code>nvngx_vsr.dll</code> は NVIDIA の条件に従います。<code>LICENSE</code> と <code>NOTICE.txt</code> を読んでください。</p>
+<p>本アプリは NVIDIA RTX Video SDK を使用しています。NVIDIA、NVIDIA RTX は NVIDIA Corporation の商標または登録商標です。<br>
+本アプリは個人が作ったもので、NVIDIA が提供・推奨・承認したものではありません。</p>
+</body>
+</html>

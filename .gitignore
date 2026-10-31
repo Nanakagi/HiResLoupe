@@ -1,0 +1,6 @@
+build/
+/HiResLoupe.exe
+/nvngx_vsr.dll
+/HiResLoupe.log
+/*.bmp
+/dist/
