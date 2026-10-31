@@ -31,12 +31,22 @@ Exceptions / 例外
    には同梱されます)は NVIDIA RTX Video SDK の一部で、上の MIT License の対象外です。
    NVIDIA の条件に従ってください(NOTICE.txt を参照)。
 
-2. Logo.png and assets/HiResLoupe.ico (the logo and icon) are not covered by the MIT
-   License. You may use them to introduce this software (articles, videos, social
-   media, etc.), but not for other purposes without the author's permission.
-   Logo.png と assets/HiResLoupe.ico(ロゴとアイコン)は MIT License の対象外です。
-   このソフトを紹介する目的(記事・動画・SNS など)には使えます。それ以外の目的では、
-   作者の許可を取ってください。
+2. Logo.png and assets/HiResLoupe.ico (the logo and icon) were generated with
+   ChatGPT. You may use them freely to introduce this software (articles, videos,
+   social media, etc.).
+   Logo.png と assets/HiResLoupe.ico(ロゴとアイコン)は ChatGPT で生成したものです。
+   このソフトを紹介する目的(記事・動画・SNS など)で自由に使えます。
+
+---
+
+Request (not a condition of the license) / お願い(ライセンスの条件ではありません)
+
+If you build something based on this software, we would appreciate it if you
+mention the name "HiResLoupe" and the author "Nanakagi" in your project's README
+or about page. It is not required.
+このソフトを元にして何かを作ったときは、できれば、プロジェクトの README や情報画面に、
+アプリ名「HiResLoupe(高解像ルーペ)」と作者名「Nanakagi」を載せてもらえると嬉しいです。
+必須ではありません。
 
 ---
 
@@ -47,5 +57,6 @@ Exceptions / 例外
   残す限り、自由にできます。
 - 無保証です。このソフトを使って生じた損害に、作者は責任を負いません。
 - 同梱の nvngx_vsr.dll は NVIDIA の条件に従います(MIT の対象外)。
-- ロゴとアイコンは、紹介の目的で使えます(MIT の対象外)。
+- ロゴとアイコンは ChatGPT で生成したもので、紹介の目的で自由に使えます。
+- このソフトを元に何かを作ったときは、アプリ名と作者名を載せてもらえると嬉しいです(お願いで、必須ではありません)。
 - 任意の寄付(ドネーション)は歓迎します。寄付をしても、この許諾の内容は変わりません。

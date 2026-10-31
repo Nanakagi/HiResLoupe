@@ -39,6 +39,7 @@ The path can also be given in the `NV_RTX_VIDEO_SDK` environment variable. The b
 ### License
 
 The source code and the app are released under the [MIT License](LICENSE). `nvngx_vsr.dll` is part of the NVIDIA RTX Video SDK and follows NVIDIA's terms (see [NOTICE.txt](NOTICE.txt)).
+The logo and icon were generated with ChatGPT. If you build something based on this software, we would appreciate a mention of "HiResLoupe" and "Nanakagi" (not required).
 NVIDIA and NVIDIA RTX are trademarks or registered trademarks of NVIDIA Corporation. This app is an independent work and is not provided, endorsed or approved by NVIDIA.
 
 ### Author
@@ -86,6 +87,7 @@ SDK の場所は、環境変数 `NV_RTX_VIDEO_SDK` でも指定できます。�
 ### ライセンス
 
 ソースコードとアプリ本体は [MIT License](LICENSE) で公開しています。`nvngx_vsr.dll` は NVIDIA RTX Video SDK の一部で、NVIDIA の条件に従います([NOTICE.txt](NOTICE.txt) を参照)。
+ロゴとアイコンは ChatGPT で生成したものです。このソフトを元に何かを作ったときは、アプリ名「HiResLoupe」と作者名「Nanakagi」を載せてもらえると嬉しいです(必須ではありません)。
 NVIDIA、NVIDIA RTX は NVIDIA Corporation の商標または登録商標です。本アプリは個人が作ったもので、NVIDIA が提供・推奨・承認したものではありません。
 
 ### 作者
