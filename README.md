@@ -10,6 +10,45 @@ A small tray tool that magnifies the desktop around the mouse pointer in real ti
 
 **No installer.** Unzip and run `HiResLoupe.exe`.
 
+### See the difference
+
+Windows 11 Magnifier (lens view, 400%) on the left, HiResLoupe (400%) on the right. Same screen, same position. The divider sweeps across the picture.
+
+**Small, low-resolution pictures** (the logo shrunk to 38–121 px): the edges stay smooth instead of turning into blocks. Left: Windows Magnifier, right: HiResLoupe.
+
+<img src="docs/images/compare-lowres-logos.gif" alt="Windows Magnifier 400% (left) and HiResLoupe 400% (right) showing small low-resolution logos" width="696">
+
+**Thin lines and small numbers.** Left: Windows Magnifier, right: HiResLoupe.
+
+<img src="docs/images/compare-thin-lines.gif" alt="Windows Magnifier 400% (left) and HiResLoupe 400% (right) showing a thin-line chart" width="639">
+
+**Small text, 7 pt to 12 pt.** Left: Windows Magnifier, right: HiResLoupe.
+
+<img src="docs/images/compare-text-sizes.gif" alt="Windows Magnifier 400% (left) and HiResLoupe 400% (right) showing text from 7 pt to 12 pt" width="495">
+
+<details>
+<summary>More comparisons</summary>
+
+**Low-resolution pictures, another position.** Left: Windows Magnifier, right: HiResLoupe.
+
+<img src="docs/images/compare-lowres-logos-2.gif" alt="Low-resolution logos, Windows Magnifier (left) and HiResLoupe (right)" width="845">
+
+**Text.** Left: Windows Magnifier, right: HiResLoupe.
+
+<img src="docs/images/compare-text.gif" alt="Text, Windows Magnifier (left) and HiResLoupe (right)" width="845">
+
+</details>
+
+The two screenshots of each pair were taken on the same screen, then aligned and cropped to the same area. The GIF format reduces the colors to 256. How much difference you see depends on what is on the screen; it is largest on small text, thin lines and low-resolution pictures.
+
+### Why HiResLoupe
+
+- **Sharper picture.** Super resolution instead of plain enlargement (see above).
+- **Zoom with the mouse wheel.** 25% steps, from 100% up to 400% (200% at start).
+- **Resize it while you use it.** Hold `Ctrl` and drag the edge of the loupe (or turn the wheel with `Ctrl` held). Keys `1` / `2` / `3` switch between shape presets: a square, a wide 16:9 and a tall 16:9.
+- **Stays on the screen.** The loupe never leaves the monitor. At the edge it stops, and the magnified area keeps following the pointer, so you can read right up to the edge of the screen. With several monitors, it moves to the monitor the pointer is on.
+- **Out of the way.** Show / hide with `Win` + `Alt` + `Z`, close with a right-click or `Esc`. It lives in the system tray and needs no installer.
+
 ### Download
 
 Go to [Releases](../../releases) and download **`HiResLoupe.zip`**.
@@ -57,6 +96,45 @@ Nanakagi
 マウスの位置を中心にデスクトップ画面をリアルタイムで拡大し、NVIDIA RTX Video SDK の超解像で高解像度に補正して見る、タスクトレイ常駐の小さなツールです。小さなアイコンや図、イラストを見るときに便利です。
 
 **インストールは要りません。** zip を展開して `HiResLoupe.exe` を起動するだけで使えます。
+
+### 違いを見る
+
+左が Windows 11 の拡大鏡(レンズ表示・400%)、右が HiResLoupe(400%)です。同じ画面の同じ場所で、境界の線が左右に動きます。
+
+**小さな低解像度の画像**(ロゴを 38〜121px に縮めたもの): 縁がブロック状にならず、なめらかなままです。左: Windows 拡大鏡、右: HiResLoupe。
+
+<img src="docs/images/compare-lowres-logos.gif" alt="Windows 拡大鏡 400%(左)と HiResLoupe 400%(右)で、小さな低解像度のロゴを比べたもの" width="696">
+
+**細い線と小さな数字。**左: Windows 拡大鏡、右: HiResLoupe。
+
+<img src="docs/images/compare-thin-lines.gif" alt="Windows 拡大鏡 400%(左)と HiResLoupe 400%(右)で、細い線のグラフを比べたもの" width="639">
+
+**小さな文字(7pt〜12pt)。**左: Windows 拡大鏡、右: HiResLoupe。
+
+<img src="docs/images/compare-text-sizes.gif" alt="Windows 拡大鏡 400%(左)と HiResLoupe 400%(右)で、7pt から 12pt の文字を比べたもの" width="495">
+
+<details>
+<summary>もっと見る</summary>
+
+**低解像度の画像(別の位置)。**左: Windows 拡大鏡、右: HiResLoupe。
+
+<img src="docs/images/compare-lowres-logos-2.gif" alt="低解像度のロゴ。左が Windows 拡大鏡、右が HiResLoupe" width="845">
+
+**文字。**左: Windows 拡大鏡、右: HiResLoupe。
+
+<img src="docs/images/compare-text.gif" alt="文字。左が Windows 拡大鏡、右が HiResLoupe" width="845">
+
+</details>
+
+どの組も、同じ画面で撮った2枚のスクリーンショットを、位置を合わせて同じ範囲に切り出したものです。GIF の形式の都合で、色は 256 色に減っています。差の大きさは画面に映っているものによって変わります。小さな文字、細い線、低解像度の画像で、一番大きく出ます。
+
+### 特長
+
+- **くっきり見える。** 単なる拡大ではなく超解像で補正します(上の比較を見てください)。
+- **マウスのホイールで倍率を変えられる。** 25% 刻みで、100%〜400%(起動時は 200%)。
+- **使いながら大きさを変えられる。** `Ctrl` を押したままルーペの縁をつかんで動かします(`Ctrl` + ホイールでも変えられます)。数字キーの `1` / `2` / `3` で、「形のテンプレート」(正方形・横長 16:9・縦長 16:9)に切り替えます。
+- **画面の外に出ない。** ルーペはモニターの外に出ません。端では止まり、拡大される範囲はポインタに付いていくので、画面の端のぎりぎりまで読めます。モニターが複数あるときは、ポインタのあるモニターへ移ります。
+- **邪魔にならない。** `Win` + `Alt` + `Z` で出し入れし、右クリックか `Esc` で閉じます。タスクトレイに常駐し、インストールは要りません。
 
 ### ダウンロード
 
