@@ -14,7 +14,9 @@ A small tray tool that magnifies the desktop around the mouse pointer in real ti
 
 Windows 11 Magnifier (lens view, 400%) on the left, HiResLoupe (400%) on the right. Same screen, same position. The divider sweeps across the picture.
 
-**Small, low-resolution pictures** (the logo shrunk to 38–121 px): the edges stay smooth instead of turning into blocks. Left: Windows Magnifier, right: HiResLoupe.
+**Small, low-resolution pictures** (the logo shrunk to 38–121 px): the edges stay smooth instead of turning into blocks. 
+
+### Left: Windows Magnifier, right: HiResLoupe
 
 <img src="docs/images/compare-lowres-logos.gif" alt="Windows Magnifier 400% (left) and HiResLoupe 400% (right) showing small low-resolution logos" width="696">
 
@@ -101,7 +103,9 @@ Nanakagi
 
 左が Windows 11 の拡大鏡(レンズ表示・400%)、右が HiResLoupe(400%)です。同じ画面の同じ場所で、境界の線が左右に動きます。
 
-**小さな低解像度の画像**(ロゴを 38〜121px に縮めたもの): 縁がブロック状にならず、なめらかなままです。左: Windows 拡大鏡、右: HiResLoupe。
+**小さな低解像度の画像**(ロゴを 38〜121px に縮めたもの): 縁がブロック状にならず、なめらかなままです。  
+
+### 左: Windows 拡大鏡、右: HiResLoupe
 
 <img src="docs/images/compare-lowres-logos.gif" alt="Windows 拡大鏡 400%(左)と HiResLoupe 400%(右)で、小さな低解像度のロゴを比べたもの" width="696">
 
