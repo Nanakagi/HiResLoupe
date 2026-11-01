@@ -17,8 +17,8 @@ Go to [Releases](../../releases) and download **`HiResLoupe.zip`**.
 
 ### Requirements
 
-- Windows 11
 - An NVIDIA RTX series GPU
+- Windows 11 (tested). Windows 10 (version 2004 or later) is untested, but it may work. If you try it on Windows 10, please tell us the result in [Issues](../../issues): your Windows version, GPU and driver version, and whether it worked.
 
 ### Quick start
 
@@ -65,8 +65,8 @@ Nanakagi
 
 ### 必要なもの
 
-- Windows 11
 - NVIDIA RTX シリーズの GPU
+- Windows 11(動作確認済み)。Windows 10(2004 以降)は未確認ですが、動く可能性があります。試した方は、Windows のバージョン、GPU とドライバーのバージョン、動いたかどうかを [Issues](../../issues) で教えてください。
 
 ### 使い始める
 

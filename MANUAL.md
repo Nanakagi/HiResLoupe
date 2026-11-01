@@ -15,7 +15,8 @@ No installer: unzip the folder and run `HiResLoupe.exe`.
 
 ### Requirements
 
-- Windows 11 / an NVIDIA RTX series GPU
+- An NVIDIA RTX series GPU
+- Windows 11 (tested). Windows 10 (version 2004 or later) is untested, but it may work. If you try it on Windows 10, please tell us the result at https://github.com/Nanakagi/HiResLoupe/issues : your Windows version, GPU and driver version, and whether it worked.
 - `nvngx_vsr.dll` and `HiResLoupe.ini` in the same folder as `HiResLoupe.exe`
 
 ### Start and quit
@@ -95,7 +96,8 @@ This app is an independent work and is not provided, endorsed or approved by NVI
 
 ### 必要なもの
 
-- Windows 11 / NVIDIA RTX シリーズの GPU
+- NVIDIA RTX シリーズの GPU
+- Windows 11(動作確認済み)。Windows 10(2004 以降)は未確認ですが、動く可能性があります。試した方は、Windows のバージョン、GPU とドライバーのバージョン、動いたかどうかを https://github.com/Nanakagi/HiResLoupe/issues で教えてください。
 - `HiResLoupe.exe` と同じフォルダに `nvngx_vsr.dll` と `HiResLoupe.ini`
 
 ### 起動・終了
