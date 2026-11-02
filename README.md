@@ -49,7 +49,8 @@ The two screenshots of each pair were taken on the same screen, then aligned and
 - **Zoom with the mouse wheel.** 25% steps, from 100% up to 400% (200% at start).
 - **Resize it while you use it.** Hold `Ctrl` and drag the edge of the loupe (or turn the wheel with `Ctrl` held). Keys `1` / `2` / `3` switch between shape presets: a square, a wide 16:9 and a tall 16:9.
 - **Stays on the screen.** The loupe never leaves the monitor. At the edge it stops, and the magnified area keeps following the pointer, so you can read right up to the edge of the screen. With several monitors, it moves to the monitor the pointer is on.
-- **Out of the way.** Show / hide with `Win` + `Alt` + `Z`, close with a right-click or `Esc`. It lives in the system tray and needs no installer.
+- **Pin it in place (v1.1).** `Ctrl` + `Space` pins the loupe where it is, while its view keeps following the pointer. Move the pointer anywhere, even onto another monitor, and read it in the pinned loupe. While pinned, `Wheel` scrolls the app underneath and `Ctrl` + `Wheel` zooms.
+- **Out of the way.** Show / hide with `Win` + `Alt` + `Z`, close with `Esc` or `Ctrl` + `Right-click` (a plain right-click goes to the app underneath). Shortcuts can be changed from the tray menu. It lives in the system tray and needs no installer.
 
 ### Download
 
@@ -138,7 +139,8 @@ Nanakagi
 - **マウスのホイールで倍率を変えられる。** 25% 刻みで、100%〜400%(起動時は 200%)。
 - **使いながら大きさを変えられる。** `Ctrl` を押したままルーペの縁をつかんで動かします(`Ctrl` + ホイールでも変えられます)。数字キーの `1` / `2` / `3` で、「形のテンプレート」(正方形・横長 16:9・縦長 16:9)に切り替えます。
 - **画面の外に出ない。** ルーペはモニターの外に出ません。端では止まり、拡大される範囲はポインタに付いていくので、画面の端のぎりぎりまで読めます。モニターが複数あるときは、ポインタのあるモニターへ移ります。
-- **邪魔にならない。** `Win` + `Alt` + `Z` で出し入れし、右クリックか `Esc` で閉じます。タスクトレイに常駐し、インストールは要りません。
+- **その場に固定できる(v1.1)。** `Ctrl` + `Space` でルーペの置き場所だけを止め、中身はポインタを追い続けます。ポインタを好きな所へ(別のモニターへも)動かして、固定したルーペで読めます。固定中は `ホイール` で下のアプリをスクロールし、`Ctrl` + `ホイール` で倍率を変えます。
+- **邪魔にならない。** `Win` + `Alt` + `Z` で出し入れし、`Esc` か `Ctrl` + `右クリック` で閉じます(ただの右クリックは下のアプリに通ります)。ショートカットはトレイのメニューから変えられます。タスクトレイに常駐し、インストールは要りません。
 
 ### ダウンロード
 

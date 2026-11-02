@@ -37,14 +37,21 @@ static const UINT WM_APP_TRAY = WM_APP + 3;    // タスクトレイのアイコ
 static const UINT_PTR TIMER_MENU = 1;           // トレイのメニューが開いている間、描画を続けるタイマー
 static const int HOTKEY_TOGGLE = 1, HOTKEY_TOGGLE2 = 2, HOTKEY_EXIT = 3;
 static const int HOTKEY_PRESET1 = 4;   // 4,5,6 = 数字キー 1,2,3（レンズの形のプリセット。レンズが出ている間だけ登録）
-static const UINT_PTR CMD_TOGGLE = 101, CMD_INI = 102, CMD_LOG = 103, CMD_QUIT = 104, CMD_STARTUP = 105, CMD_RELOAD = 106, CMD_LANG = 110;   // CMD_LANG + 0..3 = 言語の選択
+static const int HOTKEY_LATCH = 7;     // 既定 Ctrl+Space（固定のオン/オフ。レンズが出ている間だけ登録）
+static const int HOTKEY_TEST = 8;      // ショートカットの変更で、使えるかを試しに登録するだけ
+static const UINT_PTR CMD_HK = 120;    // CMD_HK + 0..5 = ショートカットの変更（出す・消す / 閉じる / 固定 / 形 1..3）
+static const int kNHk = 6;
+static const UINT_PTR CMD_LIST = 108;  // ショートカット一覧
+static const UINT_PTR CMD_TOGGLE = 101, CMD_INI = 102, CMD_LOG = 103, CMD_QUIT = 104, CMD_STARTUP = 105, CMD_RELOAD = 106, CMD_PINCUR = 107, CMD_LANG = 110;   // CMD_LANG + 0..3 = 言語の選択
 
 // ---------------------------------------------------------------- 設定
 struct Settings
 {
     UINT toggleMods = MOD_WIN | MOD_ALT | MOD_NOREPEAT, toggleKey = 0x5A;
     UINT toggle2Mods = MOD_NOREPEAT, toggle2Key = 0;
-    UINT exitKey = VK_ESCAPE;
+    UINT exitMods = MOD_NOREPEAT, exitKey = VK_ESCAPE;
+    UINT latchMods = MOD_CONTROL | MOD_NOREPEAT, latchKey = VK_SPACE;
+    UINT presetMods[3] = { MOD_NOREPEAT, MOD_NOREPEAT, MOD_NOREPEAT }, presetKey[3] = { '1', '2', '3' };   // 形のプリセット
     int zoomDefault = 200, zoomStep = 25, zoomMax = 400;
     int lensSize = 1024;
     // 設定ファイルに出さない固定値
@@ -58,9 +65,11 @@ struct Settings
     bool followMonitor = true;   // カーソルが別のモニターに出たら、レンズもそのモニターへ移す
     bool border = true;          // レンズに銀の縁を付ける
     int borderW = 4;             // 縁の太さ(px)
+    bool pinCursor = true;       // 固定中、ルーペの中のマウスの点に自前のカーソルを出す（[lens] pinned_cursor。トレイから切り替え）。
+                                 // 既定はオン: 固定したルーペの下に本物のカーソルが入ると、どこにあるか分からなくなるため
     // トレイのメニューなどの文字（[text]。空欄なら英語の既定）
     int lang = 0;   // 0=English 1=日本語 2=中文(简体) 3=한국어（[ui] language。空欄なら Windows の表示言語）
-    std::wstring txShow, txHide, txSettings, txLog, txStartup, txQuit, txTip, txLang, txReload;
+    std::wstring txShow, txHide, txSettings, txLog, txStartup, txQuit, txTip, txLang, txReload, txPinCur;
 };
 
 static std::wstring g_dir;   // exe のあるフォルダ（末尾は \）
@@ -106,6 +115,36 @@ static UINT KeyFromName(std::wstring t)
     return 0;
 }
 
+// KeyFromName の逆。ini に書いて読み戻せる名前にする
+static std::wstring KeyName(UINT vk)
+{
+    wchar_t b[16];
+    if ((vk >= 'A' && vk <= 'Z') || (vk >= '0' && vk <= '9')) return std::wstring(1, (wchar_t)vk);
+    if (vk >= VK_F1 && vk <= VK_F24) { swprintf_s(b, L"F%u", vk - VK_F1 + 1); return b; }
+    switch (vk)
+    {
+    case VK_MULTIPLY: return L"Multiply";
+    case VK_ESCAPE: return L"Esc";
+    case VK_SPACE: return L"Space";
+    case VK_RETURN: return L"Enter";
+    case VK_TAB: return L"Tab";
+    case VK_OEM_1: return L"Oem1";
+    case VK_OEM_2: return L"Oem2";
+    }
+    swprintf_s(b, L"0x%02X", vk);
+    return b;
+}
+
+static std::wstring HotkeyName(UINT mods, UINT key)
+{
+    std::wstring s;
+    if (mods & MOD_WIN) s += L"Win+";
+    if (mods & MOD_CONTROL) s += L"Ctrl+";
+    if (mods & MOD_ALT) s += L"Alt+";
+    if (mods & MOD_SHIFT) s += L"Shift+";
+    return key ? s + KeyName(key) : s;
+}
+
 // "Win+Shift+Oem1" のような文字列を修飾キーとキーに分ける。空や不明なら false
 static bool ParseHotkey(std::wstring s, UINT& mods, UINT& key)
 {
@@ -130,12 +169,77 @@ static bool ParseHotkey(std::wstring s, UINT& mods, UINT& key)
 // トレイのメニューなどの文字。言語ごとの表（[text] で個別に上書きできる）
 static const wchar_t* kLangCodes[4] = { L"en", L"ja", L"zh", L"ko" };
 static const wchar_t* kLangNames[4] = { L"English", L"日本語", L"中文(简体)", L"한국어" };   // 言語の一覧は常に自分の言語名で出す
-static const wchar_t* kTexts[4][9] = {
-    // show, hide, settings, log, startup, quit, tooltip, language, reload
-    { L"Show loupe", L"Hide loupe", L"Open settings file", L"Open log", L"Start with Windows", L"Quit", L"HiResLoupe (Win+Alt+Z)", L"Language", L"Reload settings" },
-    { L"ルーペを出す", L"ルーペを消す", L"設定ファイルを開く", L"ログを開く", L"Windows と同時に起動", L"アプリを終了", L"高解像ルーペ (Win+Alt+Z)", L"言語", L"設定を再読み込み" },
-    { L"显示放大镜", L"隐藏放大镜", L"打开设置文件", L"打开日志", L"随 Windows 启动", L"退出", L"HiResLoupe (Win+Alt+Z)", L"语言", L"重新加载设置" },
-    { L"돋보기 표시", L"돋보기 숨기기", L"설정 파일 열기", L"로그 열기", L"Windows와 함께 시작", L"종료", L"HiResLoupe (Win+Alt+Z)", L"언어", L"설정 다시 불러오기" },
+static const wchar_t* kTexts[4][10] = {
+    // show, hide, settings, log, startup, quit, tooltip, language, reload, pinned cursor
+    { L"Show loupe", L"Hide loupe", L"Open settings file", L"Open log", L"Start with Windows", L"Quit", L"HiResLoupe (Win+Alt+Z)", L"Language", L"Reload settings", L"Show pointer in pinned loupe" },
+    { L"ルーペを出す", L"ルーペを消す", L"設定ファイルを開く", L"ログを開く", L"Windows と同時に起動", L"アプリを終了", L"高解像ルーペ (Win+Alt+Z)", L"言語", L"設定を再読み込み", L"固定中のルーペにカーソルを出す" },
+    { L"显示放大镜", L"隐藏放大镜", L"打开设置文件", L"打开日志", L"随 Windows 启动", L"退出", L"HiResLoupe (Win+Alt+Z)", L"语言", L"重新加载设置", L"固定时在放大镜中显示指针" },
+    { L"돋보기 표시", L"돋보기 숨기기", L"설정 파일 열기", L"로그 열기", L"Windows와 함께 시작", L"종료", L"HiResLoupe (Win+Alt+Z)", L"언어", L"설정 다시 불러오기", L"고정 중 돋보기에 포인터 표시" },
+};
+
+// ショートカットの変更の文字（[text] では差し替えない）
+static const wchar_t* kHkTexts[4][15] = {
+    // menu, toggle, exit, latch, prompt, save, cancel, default, used by other app, used in this app, needs a modifier, shape 1, 2, 3, common shortcut
+    { L"Change shortcuts", L"Show / hide loupe", L"Close loupe", L"Pin loupe", L"Press the new shortcut.", L"Save", L"Cancel", L"Default",
+      L"Another app is using this shortcut.", L"This shortcut is already used in HiResLoupe.", L"Add Ctrl, Alt, Shift or Win (an F key can be used alone).",
+      L"Shape: square", L"Shape: wide 16:9", L"Shape: tall 16:9",
+      L"Many apps use this shortcut (copy, paste, etc.). Choose another one." },
+    { L"ショートカットを変更", L"ルーペを出す／消す", L"ルーペを閉じる", L"ルーペを固定", L"新しいショートカットを押してください。", L"保存", L"キャンセル", L"初期値",
+      L"ほかのアプリがこのショートカットを使っています。", L"このショートカットは HiResLoupe の別の操作で使っています。", L"Ctrl・Alt・Shift・Win のどれかと組み合わせてください（F キーは単独で可）。",
+      L"形: 正方形", L"形: 横 16:9", L"形: 縦 16:9",
+      L"多くのアプリが使うショートカットです（コピー・貼り付けなど）。別のキーを選んでください。" },
+    { L"更改快捷键", L"显示/隐藏放大镜", L"关闭放大镜", L"固定放大镜", L"请按下新的快捷键。", L"保存", L"取消", L"默认",
+      L"其他应用正在使用此快捷键。", L"此快捷键已在 HiResLoupe 中使用。", L"请与 Ctrl、Alt、Shift 或 Win 组合（F 键可单独使用）。",
+      L"形状：正方形", L"形状：横向 16:9", L"形状：纵向 16:9",
+      L"许多应用都使用此快捷键（复制、粘贴等）。请选择其他按键。" },
+    { L"단축키 변경", L"돋보기 표시/숨기기", L"돋보기 닫기", L"돋보기 고정", L"새 단축키를 누르세요.", L"저장", L"취소", L"기본값",
+      L"다른 앱이 이 단축키를 사용 중입니다.", L"이 단축키는 HiResLoupe에서 이미 사용 중입니다.", L"Ctrl, Alt, Shift, Win 중 하나와 함께 누르세요(F 키는 단독 가능).",
+      L"모양: 정사각형", L"모양: 가로 16:9", L"모양: 세로 16:9",
+      L"많은 앱이 사용하는 단축키입니다(복사, 붙여넣기 등). 다른 키를 선택하세요." },
+};
+
+// アプリの中だけで効くショートカット（Ctrl+C など）は RegisterHotKey では見つからない（ほかのアプリが登録していないので通ってしまう）。
+// よく使われるものだけ表で持ち、登録させない
+static bool IsCommonShortcut(UINT mods, UINT key)
+{
+    mods &= ~MOD_NOREPEAT;
+    if (mods == MOD_CONTROL && key >= 'A' && key <= 'Z' && wcschr(L"ACVXZYSFPNOWTR", (wchar_t)key)) return true;
+    if (mods == (MOD_CONTROL | MOD_SHIFT) && (key == 'Z' || key == 'T' || key == 'N')) return true;
+    if (mods == MOD_ALT && (key == VK_F4 || key == VK_TAB || key == VK_SPACE)) return true;
+    if (mods == MOD_CONTROL && (key == VK_TAB || key == VK_F4)) return true;
+    if (mods == 0 && (key == VK_RETURN || key == VK_TAB || key == VK_SPACE)) return true;
+    return false;
+}
+
+// 変更できるショートカットの名前（0=出す・消す 1=閉じる 2=固定 3..5=形 1..3）
+static const wchar_t* HkLabel(int i)
+{
+    return kHkTexts[g_set.lang][i < 3 ? 1 + i : 11 + (i - 3)];
+}
+
+// ショートカット一覧の文字（[text] では差し替えない）
+static const wchar_t* kListTexts[4][17] = {
+    // title, toggle, exit, latch, wheel, ., ctrl+wheel, ., hold ctrl, ., ctrl+drag, ., not while pinned, ctrl+right-click, changeable, fixed, wheel while pinned
+    { L"Shortcut list", L"Show / hide loupe", L"Close loupe", L"Pin loupe in place (press again to unpin)",
+      L"Wheel", L"Zoom (down = in, up = out)", L"Ctrl+Wheel", L"Resize loupe (down = larger)",
+      L"Hold Ctrl", L"Freeze the view and move the pointer inside the magnified image", L"Ctrl+drag the frame", L"Resize loupe",
+      L" (not while pinned)", L"Ctrl+Right-click", L"[Can be changed] (tray menu > Change shortcuts)", L"[Fixed]",
+      L"While pinned: Ctrl+Wheel = zoom, Wheel = scroll the app underneath" },
+    { L"ショートカット一覧", L"ルーペを出す／消す", L"ルーペを閉じる", L"ルーペをその場に固定（もう一度で解除）",
+      L"ホイール", L"倍率（下で拡大、上で縮小）", L"Ctrl+ホイール", L"ルーペの大きさ（下で大きく）",
+      L"Ctrl を押している間", L"絵を止め、拡大像の中でカーソルを動かす", L"Ctrl+枠をドラッグ", L"ルーペの大きさを変える",
+      L"（固定中は使えない）", L"Ctrl+右クリック", L"【変更可能】（トレイのメニュー →「ショートカットを変更」）", L"【変更不可】",
+      L"固定中: Ctrl+ホイールで倍率、ホイールは下のアプリのスクロール" },
+    { L"快捷键一览", L"显示/隐藏放大镜", L"关闭放大镜", L"将放大镜固定在原位（再按一次解除）",
+      L"滚轮", L"缩放（向下放大，向上缩小）", L"Ctrl+滚轮", L"调整放大镜大小（向下变大）",
+      L"按住 Ctrl", L"冻结画面，在放大图像中移动指针", L"Ctrl+拖动边框", L"调整放大镜大小",
+      L"（固定时不可用）", L"Ctrl+右键", L"【可更改】（托盘菜单 →“更改快捷键”）", L"【不可更改】",
+      L"固定时：Ctrl+滚轮调整缩放，滚轮用于滚动下方的应用" },
+    { L"단축키 목록", L"돋보기 표시/숨기기", L"돋보기 닫기", L"돋보기를 제자리에 고정(다시 누르면 해제)",
+      L"휠", L"배율(아래로 확대, 위로 축소)", L"Ctrl+휠", L"돋보기 크기(아래로 크게)",
+      L"Ctrl 누르고 있기", L"화면을 멈추고 확대 이미지 안에서 포인터 이동", L"Ctrl+테두리 드래그", L"돋보기 크기 변경",
+      L" (고정 중에는 사용 불가)", L"Ctrl+오른쪽 클릭", L"[변경 가능] (트레이 메뉴 → '단축키 변경')", L"[변경 불가]",
+      L"고정 중: Ctrl+휠로 배율, 휠은 아래 앱 스크롤" },
 };
 
 // "ja" などの文字列から言語番号へ。空や不明なら Windows の表示言語（日・中・韓以外は英語）
@@ -155,12 +259,12 @@ static int LangFromName(std::wstring t)
 static void LoadTexts()
 {
     std::wstring ini = g_dir + L"HiResLoupe.ini";
-    std::wstring* dst[9] = { &g_set.txShow, &g_set.txHide, &g_set.txSettings, &g_set.txLog, &g_set.txStartup, &g_set.txQuit, &g_set.txTip, &g_set.txLang, &g_set.txReload };
-    static const wchar_t* keys[9] = { L"show_loupe", L"hide_loupe", L"open_settings_file", L"open_log", L"start_with_windows", L"quit", L"tray_tooltip", L"language", L"reload_settings" };
+    std::wstring* dst[10] = { &g_set.txShow, &g_set.txHide, &g_set.txSettings, &g_set.txLog, &g_set.txStartup, &g_set.txQuit, &g_set.txTip, &g_set.txLang, &g_set.txReload, &g_set.txPinCur };
+    static const wchar_t* keys[10] = { L"show_loupe", L"hide_loupe", L"open_settings_file", L"open_log", L"start_with_windows", L"quit", L"tray_tooltip", L"language", L"reload_settings", L"pinned_cursor" };
     // [text]: メモ帳が UTF-8 で保存してもそのまま読めるよう、バイト列で取って UTF-8 → だめなら ANSI の順に解釈する
     char iniA[MAX_PATH * 2];
     WideCharToMultiByte(CP_ACP, 0, ini.c_str(), -1, iniA, sizeof iniA, nullptr, nullptr);
-    for (int i = 0; i < 9; i++)
+    for (int i = 0; i < 10; i++)
     {
         *dst[i] = kTexts[g_set.lang][i];
         char buf[256];
@@ -192,7 +296,13 @@ static void LoadSettings()
     if (ParseHotkey(str(L"hotkey", L"toggle", L"Win+Alt+Z"), m, k)) { g_set.toggleMods = m; g_set.toggleKey = k; }
     if (ParseHotkey(str(L"hotkey", L"toggle2", L""), m, k)) { g_set.toggle2Mods = m; g_set.toggle2Key = k; }
     else g_set.toggle2Key = 0;
-    if (ParseHotkey(str(L"hotkey", L"exit", L"Esc"), m, k)) g_set.exitKey = k;
+    if (ParseHotkey(str(L"hotkey", L"exit", L"Esc"), m, k)) { g_set.exitMods = m; g_set.exitKey = k; }
+    if (ParseHotkey(str(L"hotkey", L"latch", L"Ctrl+Space"), m, k)) { g_set.latchMods = m; g_set.latchKey = k; }
+    for (int i = 0; i < 3; ++i)
+    {
+        const std::wstring n = std::to_wstring(i + 1);
+        if (ParseHotkey(str(L"hotkey", (L"preset" + n).c_str(), n.c_str()), m, k)) { g_set.presetMods[i] = m; g_set.presetKey[i] = k; }
+    }
     g_set.zoomDefault = num(L"zoom", L"default", 200);
     g_set.zoomStep = std::max(1, num(L"zoom", L"step", 25));
     g_set.zoomMax = std::max(g_set.zoomMin, num(L"zoom", L"max", 400));
@@ -200,6 +310,7 @@ static void LoadSettings()
     g_set.followMonitor = num(L"lens", L"follow_monitor", 1) != 0;
     g_set.border = num(L"lens", L"border", 1) != 0;
     g_set.borderW = std::clamp(num(L"lens", L"border_width", 4), 1, 16);
+    g_set.pinCursor = num(L"lens", L"pinned_cursor", 1) != 0;
     g_set.logTiming = num(L"debug", L"log_timing", 0) != 0;
     g_set.ahead = std::clamp(num(L"debug", L"ahead", 30), 0, 1024);
     g_set.pad = std::clamp(num(L"debug", L"pad", 8), 0, 32) / 4 * 4;
@@ -289,8 +400,17 @@ struct Gpu
     ComPtr<IDXGIAdapter1> adapter;
     ComPtr<ID3D11Device> dev;
     ComPtr<ID3D11DeviceContext> ctx;
-    ComPtr<IDXGIOutput1> output;
-    ComPtr<IDXGIOutputDuplication> dup;
+    // 同じ GPU につながったモニターを全部取り込み、デスクトップの座標どおりに 1 枚（desktopTex）へ貼り合わせる
+    // （DuplicateOutput の公式の説明: デスクトップ全体を取り込むなら、有効な出力ごとに取り込みを作る）
+    struct Out
+    {
+        ComPtr<IDXGIOutput1> output;
+        ComPtr<IDXGIOutputDuplication> dup;
+        HMONITOR mon = nullptr;
+        RECT rect{};          // デスクトップ座標
+        bool got = false;     // 1 枚目が取れたか
+    };
+    std::vector<Out> outs;
     ComPtr<ID3D11Texture2D> desktopTex;   // 最後に取れた画面（BGRA）
     ComPtr<ID3D11Texture2D> outTex;       // 超解像の結果
     ComPtr<IDCompositionDevice> dcDev;    // DirectComposition のデバイス
@@ -320,14 +440,16 @@ struct Gpu
     UINT diffTiles = 0;
     bool diffOk = false, diffFailed = false, newFrame = false;
     LUID luid{};
-    HMONITOR mon = nullptr;
-    RECT monRect{};
+    RECT monRect{};                               // 取り込んでいる範囲（全モニターを囲む四角。拡大元の画面。サーフェスとタイルもこの大きさ）
+    HMONITOR winMon = nullptr;
+    RECT winRect{};                               // 窓とレンズのいるモニター。固定中はマウスが別のモニターへ行っても動かさない（取り込みだけ monRect が追う）
     UINT texW = 0, texH = 0, outW = 0, outH = 0;
     bool ngx = false, haveFrame = false;
 
     void ReleaseSwap();
     bool EnsureFor(HMONITOR hm);
-    bool MakeDuplication();
+    bool Covers(HMONITOR hm) const;
+    bool RectOf(HMONITOR hm, RECT& r) const;
     void Capture(UINT timeoutMs);
     bool Upscale(const RECT& src, UINT w, UINT h, int quality);
     bool UpscaleSub(const RECT& src, UINT w, UINT h, int quality);
@@ -357,8 +479,7 @@ void Gpu::ReleaseSwap()
 void Gpu::Shutdown()
 {
     ReleaseSwap();
-    dup.Reset();
-    output.Reset();
+    outs.clear();
     desktopTex.Reset();
     prevTex.Reset(); srvNow.Reset(); srvPrev.Reset(); diffUav.Reset(); diffBuf.Reset(); diffStage.Reset(); diffCb.Reset(); diffCs.Reset();
     diffFor = nullptr; diffOk = false;
@@ -367,27 +488,30 @@ void Gpu::Shutdown()
     ctx.Reset();
     dev.Reset();
     adapter.Reset();
-    mon = nullptr;
     haveFrame = false;
 }
 
-bool Gpu::MakeDuplication()
+bool Gpu::Covers(HMONITOR hm) const
 {
-    dup.Reset();
-    HRESULT hr = output->DuplicateOutput(dev.Get(), &dup);
-    if (FAILED(hr)) { Log(L"DuplicateOutput 失敗 hr=0x%08X", (unsigned)hr); return false; }
-    return true;
+    for (const Out& o : outs) if (o.mon == hm) return true;
+    return false;
 }
 
+bool Gpu::RectOf(HMONITOR hm, RECT& r) const
+{
+    for (const Out& o : outs) if (o.mon == hm) { r = o.rect; return true; }
+    return false;
+}
+
+// hm のつながった GPU の、デスクトップに出ているモニターを全部取り込む用意をする
 bool Gpu::EnsureFor(HMONITOR hm)
 {
-    if (mon == hm && dup) return true;
+    if (dev && Covers(hm)) return true;
 
     ComPtr<IDXGIFactory1> factory;
     if (FAILED(CreateDXGIFactory1(IID_PPV_ARGS(&factory)))) return false;
     ComPtr<IDXGIAdapter1> foundAd;
-    ComPtr<IDXGIOutput> foundOut;
-    for (UINT a = 0; !foundOut; ++a)
+    for (UINT a = 0; !foundAd; ++a)
     {
         ComPtr<IDXGIAdapter1> ad;
         if (factory->EnumAdapters1(a, &ad) != S_OK) break;
@@ -397,10 +521,10 @@ bool Gpu::EnsureFor(HMONITOR hm)
             if (ad->EnumOutputs(o, &out) != S_OK) break;
             DXGI_OUTPUT_DESC d;
             out->GetDesc(&d);
-            if (d.Monitor == hm) { foundAd = ad; foundOut = out; monRect = d.DesktopCoordinates; break; }
+            if (d.Monitor == hm) { foundAd = ad; break; }
         }
     }
-    if (!foundOut) { Log(L"モニターに対応する出力が見つからない"); return false; }
+    if (!foundAd) { Log(L"モニターに対応する出力が見つからない"); return false; }
 
     DXGI_ADAPTER_DESC1 ad;
     foundAd->GetDesc1(&ad);
@@ -418,9 +542,32 @@ bool Gpu::EnsureFor(HMONITOR hm)
         }
         ngx = true;
     }
-    mon = hm;
-    foundOut.As(&output);
-    if (!MakeDuplication()) return false;
+
+    // この GPU の出力ごとに取り込みを作る。hm 以外で作れなかったモニターは外す（その場所は黒のまま）
+    outs.clear();
+    for (UINT o = 0;; ++o)
+    {
+        ComPtr<IDXGIOutput> out;
+        if (foundAd->EnumOutputs(o, &out) != S_OK) break;
+        DXGI_OUTPUT_DESC d;
+        out->GetDesc(&d);
+        if (!d.AttachedToDesktop) continue;
+        Out x;
+        x.mon = d.Monitor;
+        x.rect = d.DesktopCoordinates;
+        if (FAILED(out.As(&x.output))) continue;
+        HRESULT hr = x.output->DuplicateOutput(dev.Get(), &x.dup);
+        if (FAILED(hr))
+        {
+            Log(L"DuplicateOutput 失敗 hr=0x%08X (%ld,%ld)-(%ld,%ld)", (unsigned)hr, x.rect.left, x.rect.top, x.rect.right, x.rect.bottom);
+            if (d.Monitor == hm) { outs.clear(); return false; }
+            continue;
+        }
+        outs.push_back(std::move(x));
+    }
+    if (!Covers(hm)) { outs.clear(); return false; }
+    monRect = outs[0].rect;
+    for (const Out& x : outs) UnionRect(&monRect, &monRect, &x.rect);
 
     texW = (UINT)(monRect.right - monRect.left);
     texH = (UINT)(monRect.bottom - monRect.top);
@@ -431,52 +578,79 @@ bool Gpu::EnsureFor(HMONITOR hm)
     td.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
     td.SampleDesc.Count = 1;
     td.Usage = D3D11_USAGE_DEFAULT;
-    td.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    td.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;   // RENDER_TARGET はモニターの無いすき間を黒で埋めるため
     desktopTex.Reset();
     if (FAILED(dev->CreateTexture2D(&td, nullptr, &desktopTex))) return false;
+    ComPtr<ID3D11RenderTargetView> rtv;
+    if (SUCCEEDED(dev->CreateRenderTargetView(desktopTex.Get(), nullptr, &rtv)))
+    {
+        const float black[4] = { 0, 0, 0, 1 };
+        ctx->ClearRenderTargetView(rtv.Get(), black);
+    }
     haveFrame = false;
+    Log(L"取り込みの範囲: (%ld,%ld)-(%ld,%ld) モニター%u台", monRect.left, monRect.top, monRect.right, monRect.bottom, (unsigned)outs.size());
     return true;
 }
 
+// 各モニターの新しい絵を desktopTex のその場所へ貼る。1 枚目が取れていないモニターだけ timeoutMs まで待つ
 void Gpu::Capture(UINT timeoutMs)
 {
-    if (!dup && output) { allDirty = true; MakeDuplication(); }   // 画面の切り替え(UACなど)のあと取り直す。変わった所は分からない
-    if (!dup) return;
-    DXGI_OUTDUPL_FRAME_INFO info;
-    ComPtr<IDXGIResource> res;
-    HRESULT hr = dup->AcquireNextFrame(timeoutMs, &info, &res);
-    if (hr == DXGI_ERROR_WAIT_TIMEOUT) return;
-    if (hr == DXGI_ERROR_ACCESS_LOST) { dup.Reset(); return; }
-    if (FAILED(hr)) return;
-    if (info.LastPresentTime.QuadPart != 0)
+    bool prevSaved = false;
+    for (Out& o : outs)
     {
-        ComPtr<ID3D11Texture2D> t;
-        if (SUCCEEDED(res.As(&t)))
+        if (!o.dup)   // 画面の切り替え(UACなど)のあと取り直す。変わった所は分からない
         {
-            if (haveFrame && prevTex && diffFor == desktopTex.Get()) ctx->CopyResource(prevTex.Get(), desktopTex.Get());
-            ctx->CopyResource(desktopTex.Get(), t.Get());
-            if (!haveFrame) allDirty = true;
-            haveFrame = true;
-            newFrame = true;
-            // 変わった四角を溜める（描き直すタイルを絞るため。取れなければ全部描き直す）
-            UINT meta = info.TotalMetadataBufferSize;
-            if (meta == 0) allDirty = true;
-            else
+            allDirty = true;
+            if (FAILED(o.output->DuplicateOutput(dev.Get(), &o.dup))) { o.dup.Reset(); continue; }
+        }
+        DXGI_OUTDUPL_FRAME_INFO info;
+        ComPtr<IDXGIResource> res;
+        HRESULT hr = o.dup->AcquireNextFrame(o.got ? 0 : timeoutMs, &info, &res);
+        if (hr == DXGI_ERROR_WAIT_TIMEOUT) continue;
+        if (hr == DXGI_ERROR_ACCESS_LOST) { o.dup.Reset(); continue; }
+        if (FAILED(hr)) continue;
+        if (info.LastPresentTime.QuadPart != 0)
+        {
+            ComPtr<ID3D11Texture2D> t;
+            if (SUCCEEDED(res.As(&t)))
             {
-                std::vector<BYTE> buf(meta);
-                UINT used = 0;
-                bool mok = SUCCEEDED(dup->GetFrameMoveRects(meta, (DXGI_OUTDUPL_MOVE_RECT*)buf.data(), &used));
-                if (mok)
-                    for (UINT i = 0; i < used / sizeof(DXGI_OUTDUPL_MOVE_RECT); ++i) dirty.push_back(((DXGI_OUTDUPL_MOVE_RECT*)buf.data())[i].DestinationRect);
-                used = 0;
-                mok = mok && SUCCEEDED(dup->GetFrameDirtyRects(meta, (RECT*)buf.data(), &used));
-                if (mok)
-                    for (UINT i = 0; i < used / sizeof(RECT); ++i) dirty.push_back(((RECT*)buf.data())[i]);
-                else allDirty = true;
+                if (!prevSaved && haveFrame && prevTex && diffFor == desktopTex.Get()) ctx->CopyResource(prevTex.Get(), desktopTex.Get());
+                prevSaved = true;
+                const int dx = o.rect.left - monRect.left, dy = o.rect.top - monRect.top;
+                D3D11_TEXTURE2D_DESC sd;
+                t->GetDesc(&sd);
+                D3D11_BOX box{ 0, 0, 0, std::min<UINT>(sd.Width, (UINT)(o.rect.right - o.rect.left)), std::min<UINT>(sd.Height, (UINT)(o.rect.bottom - o.rect.top)), 1 };
+                ctx->CopySubresourceRegion(desktopTex.Get(), 0, (UINT)dx, (UINT)dy, 0, t.Get(), 0, &box);
+                if (!o.got) allDirty = true;
+                o.got = true;
+                newFrame = true;
+                // 変わった四角を溜める（描き直すタイルを絞るため。取れなければ全部描き直す）。座標は貼り合わせた絵の上へずらす
+                UINT meta = info.TotalMetadataBufferSize;
+                if (meta == 0) allDirty = true;
+                else
+                {
+                    std::vector<BYTE> buf(meta);
+                    UINT used = 0;
+                    auto add = [&](RECT r) { OffsetRect(&r, dx, dy); dirty.push_back(r); };
+                    bool mok = SUCCEEDED(o.dup->GetFrameMoveRects(meta, (DXGI_OUTDUPL_MOVE_RECT*)buf.data(), &used));
+                    if (mok)
+                        for (UINT i = 0; i < used / sizeof(DXGI_OUTDUPL_MOVE_RECT); ++i) add(((DXGI_OUTDUPL_MOVE_RECT*)buf.data())[i].DestinationRect);
+                    used = 0;
+                    mok = mok && SUCCEEDED(o.dup->GetFrameDirtyRects(meta, (RECT*)buf.data(), &used));
+                    if (mok)
+                        for (UINT i = 0; i < used / sizeof(RECT); ++i) add(((RECT*)buf.data())[i]);
+                    else allDirty = true;
+                }
             }
         }
+        o.dup->ReleaseFrame();
     }
-    dup->ReleaseFrame();
+    if (!haveFrame && !outs.empty())
+    {
+        bool all = true;
+        for (const Out& o : outs) all = all && o.got;
+        haveFrame = all;
+    }
 }
 
 bool Gpu::Upscale(const RECT& src, UINT w, UINT h, int quality)
@@ -604,6 +778,8 @@ struct Lens
     HANDLE hookThread = nullptr;   // マウスフック専用スレッド
     DWORD hookThreadId = 0;
     bool active = false, frozen = false;
+    bool latched = false;   // 固定のキー（既定 Ctrl+Space）で入れる固定。レンズの置き場所だけ止め、中身は今まで通りマウスのまわりを映す
+    POINT pin{};            // 固定中のレンズの中心（画面座標）
     int zoom = 200, lensW = 1024, lensH = 1024;
     POINT anchor{};
     RECT lastPos{};
@@ -899,7 +1075,15 @@ static LRESULT CALLBACK MouseHook(int code, WPARAM wp, LPARAM lp)
                 return MapMove(m->pt) ? 1 : CallNextHookEx(nullptr, code, wp, lp);
             if (wp == WM_MOUSEWHEEL)
             {
-                PostMessageW(g.hwnd, WM_APP_WHEEL, (WPARAM)(int)(short)HIWORD(m->mouseData), (GetAsyncKeyState(VK_CONTROL) & 0x8000) ? 1 : 0);
+                const bool ctrl = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
+                // 固定中はホイールを下のアプリに通し（スクロールできる）、Ctrl+ホイールを倍率にする。大きさは縁のドラッグだけで変える
+                if (g.latched)
+                {
+                    if (!ctrl) return CallNextHookEx(nullptr, code, wp, lp);
+                    PostMessageW(g.hwnd, WM_APP_WHEEL, (WPARAM)(int)(short)HIWORD(m->mouseData), 0);
+                    return 1;
+                }
+                PostMessageW(g.hwnd, WM_APP_WHEEL, (WPARAM)(int)(short)HIWORD(m->mouseData), ctrl ? 1 : 0);
                 return 1;
             }
             if (wp == WM_LBUTTONDOWN && (GetAsyncKeyState(VK_CONTROL) & 0x8000) && g_lensWd > 0)
@@ -913,8 +1097,8 @@ static LRESULT CALLBACK MouseHook(int code, WPARAM wp, LPARAM lp)
                 }
             }
             if (wp == WM_LBUTTONUP && g_dragMode) { g_dragMode = 0; g_ptOn = false; return 1; }   // つかんでいる間は本物のポインタが動いたので、V を取り直す
-            // Ctrl を押している間は右クリックを通す（トレイのメニューを開けるように）。DOWN と UP は同じ扱いにそろえる
-            if (wp == WM_RBUTTONDOWN && !(GetAsyncKeyState(VK_CONTROL) & 0x8000))
+            // 右クリックは下のアプリに通す（固定中・追従中も右クリックメニューを使える）。Ctrl+右クリックで閉じる。DOWN と UP は同じ扱いにそろえる
+            if (wp == WM_RBUTTONDOWN && (GetAsyncKeyState(VK_CONTROL) & 0x8000))
             {
                 g_rbSwallowed = true;
                 PostMessageW(g.hwnd, WM_APP_EXIT, 0, 0);
@@ -1035,33 +1219,34 @@ static bool EnsureBorder(int w, int h)
 static void DcompCommit(POINT a)
 {
     if (!g_ri.valid || !gpu.dcVisual || !gpu.dcDev) return;
-    const RECT& m = gpu.monRect;
+    const RECT& m = gpu.monRect;      // 取り込み側（拡大元の座標の原点）
+    const RECT& wr = gpu.winRect;     // 窓・レンズ側
     const int w = g_ri.w, h = g_ri.h;
     const double Z = g_ri.zq / 100.0;
-    auto axis = [&](int cur, int mn, int mx, int vis, int ru, int full, double& off, int& crop, double& err, bool& clamped, std::atomic<double>& base)
+    auto axis = [&](int cur, int pin, int wmn, int wmx, int cmn, int vis, int ru, int full, double& off, int& crop, double& err, bool& clamped, std::atomic<double>& base)
     {
-        int left = std::clamp<int>(cur - vis / 2, mn, mx - vis);   // 端で止まるレンズの左
+        int left = std::clamp<int>((g.latched ? pin : cur) - vis / 2, wmn, wmx - vis);   // 端で止まるレンズの左（固定中は止めた中心から）
         double c1 = left + vis / 2.0;
-        double s1 = cur - (cur - c1) / Z;                           // レンズに見せたい拡大元の中心（画面座標）
-        double want = (s1 - mn) * Z - vis / 2.0;                    // 欲しい切り出しの左上（サーフェス座標）
+        double s1 = g.latched ? cur : cur - (cur - c1) / Z;        // レンズに見せたい拡大元の中心（画面座標）。固定中はマウスの点そのもの
+        double want = (s1 - cmn) * Z - vis / 2.0;                    // 欲しい切り出しの左上（サーフェス座標）
         double cu = std::clamp(want, (double)ru, (double)(ru + full - vis));
         clamped = cu != want;
         crop = (int)std::lround(cu);
-        off = (left - mn) - crop;                                   // visual の位置（窓＝モニターの左上が原点）
-        base = mn + (crop - left) / Z;                              // レンズ上の画面座標 p に見えている絵の元の位置 = base + p / Z（Ctrl 中のポインタの写像）
-        err = (left - mn) + (cur - mn) * Z - crop - (cur - mn);     // マウスの点の絵が、画面上のマウスからずれる量
+        off = (left - wmn) - crop;                                  // visual の位置（窓＝レンズのいるモニターの左上が原点）
+        base = cmn + (crop - left) / Z;                              // レンズ上の画面座標 p に見えている絵の元の位置 = base + p / Z（Ctrl 中のポインタの写像）
+        err = (left - wmn) + (cur - cmn) * Z - crop - (cur - wmn);     // マウスの点の絵が、画面上のマウスからずれる量
         g_osShift += std::fabs(crop - (ru + (full - vis) / 2.0));
     };
     double ox, oy, ex, ey;
     int cx, cy;
     bool kx, ky;
-    axis(a.x, m.left, m.right, w, g_ri.ru, g_ri.full, ox, cx, ex, kx, g_mapBx);
-    axis(a.y, m.top, m.bottom, h, g_ri.rv, g_ri.fullV, oy, cy, ey, ky, g_mapBy);
+    axis(a.x, g.pin.x, wr.left, wr.right, m.left, w, g_ri.ru, g_ri.full, ox, cx, ex, kx, g_mapBx);
+    axis(a.y, g.pin.y, wr.top, wr.bottom, m.top, h, g_ri.rv, g_ri.fullV, oy, cy, ey, ky, g_mapBy);
     g_mapZ = Z;
     static double lastOx = 1e9, lastOy = 1e9;
     static int lastCx = INT_MIN, lastCy = INT_MIN, lastW = 0, lastH = 0;
-    g_lensL = m.left + (int)std::lround(ox + cx);   // 縁をつかむ判定用に、レンズの画面上の四角を残す
-    g_lensT = m.top + (int)std::lround(oy + cy);
+    g_lensL = wr.left + (int)std::lround(ox + cx);   // 縁をつかむ判定用に、レンズの画面上の四角を残す
+    g_lensT = wr.top + (int)std::lround(oy + cy);
     g_lensWd = w;
     g_lensHt = h;
     bool borderNew = EnsureBorder(w, h);
@@ -1238,7 +1423,7 @@ static HCURSOR LoadCursorFileSized(int idx, int cs)
 static void CaptureCursors()
 {
     const int N = kCurN;
-    g_curDpi = MonitorDpi(gpu.mon);
+    g_curDpi = MonitorDpi(gpu.winMon);
     const int cs = CursorSizeFor(g_curDpi);
     g_curAtlas.assign((size_t)N * kNCells * N, 0);
     g_invMask.assign((size_t)N * kNCells * N, 0);
@@ -1336,7 +1521,7 @@ static void SetCursorsHidden(bool hide)
     g_cursorsHidden = hide;
     if (hide)
     {
-        if (!g_curCaptured || g_curDpi != MonitorDpi(gpu.mon)) CaptureCursors();   // 隠す前（本物が見えている間）に、ポインタのいる画面の大きさで写す
+        if (!g_curCaptured || g_curDpi != MonitorDpi(gpu.winMon)) CaptureCursors();   // 隠す前（本物が見えている間）に、ポインタのいる画面の大きさで写す
         BYTE andMask[32 * 32 / 8], xorMask[32 * 32 / 8];
         memset(andMask, 0xFF, sizeof andMask);   // AND=1, XOR=0 は「画面そのまま」＝透明
         memset(xorMask, 0x00, sizeof xorMask);
@@ -1372,17 +1557,33 @@ static int CurrentCursorKind()
         if (ii.hbmMask) DeleteObject(ii.hbmMask);
         if (ii.hbmColor) DeleteObject(ii.hbmColor);
     }
+    // 隠していないとき（固定中）は目印が無いので、システムの共有カーソルと同じ値かで見分ける
+    for (int i = 0; i < kNCur && kind < 0; ++i)
+        if (ci.hCursor == LoadCursorW(nullptr, MAKEINTRESOURCEW(kCurIds[i]))) kind = i;
     lastH = ci.hCursor;
     lastKind = kind;
     return kind;
 }
 
-// Ctrl 中にレンズの中へ入っている間だけ、自前のカーソルを V の位置に出して、本物のカーソルを隠す
+// Ctrl 中にレンズの中へ入っている間だけ、自前のカーソルを V の位置に出して、本物のカーソルを隠す。
+// 固定中（Ctrl なし）は本物を隠さず、ルーペの中でマウスの点が映っている場所に自前のカーソルを出す
 static void UpdateArrow()
 {
     if (!gpu.dcArrow || !gpu.dcDev) return;
     bool show = g.active && g_ptOn && g_inLens;
     SetCursorsHidden(show);
+    POINT v{};
+    if (show) v = VirtualPos();
+    else if (g.active && g.latched && !g_ptOn && g_set.pinCursor && g_lensWd > 0)
+    {
+        POINT cur;
+        GetCursorPos(&cur);
+        const double Z = g_mapZ;
+        v.x = (LONG)std::lround((cur.x - g_mapBx) * Z);   // R = base + V / Z の逆
+        v.y = (LONG)std::lround((cur.y - g_mapBy) * Z);
+        show = v.x >= g_lensL && v.x < g_lensL + g_lensWd && v.y >= g_lensT && v.y < g_lensT + g_lensHt;
+        if (show && (!g_curCaptured || g_curDpi != MonitorDpi(gpu.winMon))) CaptureCursors();   // 本物が見えている今のうちに写す
+    }
     static bool shown = false;
     static LONG lastX = LONG_MIN, lastY = LONG_MIN;
     static int lastCell = -1;
@@ -1433,17 +1634,16 @@ static void UpdateArrow()
         lastCell = cell;
         changed = true;
     }
-    POINT v = VirtualPos();
     if (!changed && shown && v.x == lastX && v.y == lastY) return;
     shown = true;
     lastX = v.x;
     lastY = v.y;
-    gpu.dcArrow->SetOffsetX((float)(v.x - gpu.monRect.left - g_curHot[cell][0] - cell * kCurN));
-    gpu.dcArrow->SetOffsetY((float)(v.y - gpu.monRect.top - g_curHot[cell][1]));
+    gpu.dcArrow->SetOffsetX((float)(v.x - gpu.winRect.left - g_curHot[cell][0] - cell * kCurN));
+    gpu.dcArrow->SetOffsetY((float)(v.y - gpu.winRect.top - g_curHot[cell][1]));
     if (gpu.dcInv)
     {
-        gpu.dcInv->SetOffsetX((float)(v.x - gpu.monRect.left - g_curHot[cell][0] - cell * kCurN));
-        gpu.dcInv->SetOffsetY((float)(v.y - gpu.monRect.top - g_curHot[cell][1]));
+        gpu.dcInv->SetOffsetX((float)(v.x - gpu.winRect.left - g_curHot[cell][0] - cell * kCurN));
+        gpu.dcInv->SetOffsetY((float)(v.y - gpu.winRect.top - g_curHot[cell][1]));
     }
     gpu.dcDev->Commit();
 }
@@ -1522,8 +1722,9 @@ static void LogFrame(double tA, double tB, double tC, double tD, UINT cw, UINT c
 // 静止した画面で、マウスが止まっていれば、描く量はゼロ。動いていれば新しく先に入ってくる細い帯だけ
 static void FrameSurface(double tA)
 {
-    const RECT& m = gpu.monRect;
-    const int monW = m.right - m.left, monH = m.bottom - m.top;
+    const RECT& m = gpu.monRect;      // 取り込み側
+    const RECT& wr = gpu.winRect;     // 窓・レンズ側
+    const int monW = wr.right - wr.left, monH = wr.bottom - wr.top;
     const int texW = (int)gpu.texW, texH = (int)gpu.texH;
     const int zq = std::clamp((g.zoom + 12) / 25 * 25, 100, 400);   // 世界の座標をそろえるため25%刻み
     const double Z = zq / 100.0;
@@ -1583,10 +1784,11 @@ static void FrameSurface(double tA)
     gpu.newFrame = false;
 
     // レンズに見せたい拡大元(画面座標)。端で止まるレンズ中心とマウスのずれを反映する
-    int lx = std::clamp<int>(g.anchor.x - w / 2, m.left, m.right - w);
-    int ly = std::clamp<int>(g.anchor.y - h / 2, m.top, m.bottom - h);
-    double s1x = g.anchor.x - (g.anchor.x - (lx + w / 2.0)) / Z;
-    double s1y = g.anchor.y - (g.anchor.y - (ly + h / 2.0)) / Z;
+    // 固定中はレンズの置き場所が止まり、拡大元はマウスの点そのもの（DcompCommit と同じ式）
+    int lx = std::clamp<int>((g.latched ? g.pin.x : g.anchor.x) - w / 2, wr.left, wr.right - w);
+    int ly = std::clamp<int>((g.latched ? g.pin.y : g.anchor.y) - h / 2, wr.top, wr.bottom - h);
+    double s1x = g.latched ? g.anchor.x : g.anchor.x - (g.anchor.x - (lx + w / 2.0)) / Z;
+    double s1y = g.latched ? g.anchor.y : g.anchor.y - (g.anchor.y - (ly + h / 2.0)) / Z;
     int lsw = std::min(texW, (int)std::ceil(w / Z)), lsh = std::min(texH, (int)std::ceil(h / Z));
     int lsl = std::clamp<int>((int)std::lround(s1x) - m.left - lsw / 2, 0, texW - lsw);
     int lst = std::clamp<int>((int)std::lround(s1y) - m.top - lsh / 2, 0, texH - lsh);
@@ -1760,7 +1962,7 @@ static void Frame()
             POINT p;
             GetCursorPos(&p);
             // 縁をつかんだ軸だけ、中心からの距離×2を大きさにする（比率は自由に変わる）
-            const int maxW = gpu.monRect.right - gpu.monRect.left, maxH = gpu.monRect.bottom - gpu.monRect.top;
+            const int maxW = gpu.winRect.right - gpu.winRect.left, maxH = gpu.winRect.bottom - gpu.winRect.top;
             if (dm & 1) g.lensW = std::clamp<int>(2 * std::abs(p.x - g_dragCx.load()), g_set.lensMin, maxW);
             if (dm & 2) g.lensH = std::clamp<int>(2 * std::abs(p.y - g_dragCy.load()), g_set.lensMin, maxH);
         }
@@ -1768,20 +1970,32 @@ static void Frame()
     if (!g.frozen) GetCursorPos(&g.anchor);
     if (g_set.followMonitor && !g.frozen)
     {
-        // カーソルが別のモニターに出たら、そのモニターの画面を取り直して窓を移す（画面の取得は出力ごとに作る仕組み）
+        // カーソルが別のモニターに出たら、窓をそのモニターへ移す（固定中は今のモニターに残し、固定を解いたら移す）。
+        // 取り込みは同じ GPU のモニターを全部貼り合わせて持っているので、境目をまたいでも絵はつながったまま
         HMONITOR hm = MonitorFromPoint(g.anchor, MONITOR_DEFAULTTONEAREST);
-        if (hm != gpu.mon)
+        const bool moveWin = !g.latched && hm != gpu.winMon;
+        const bool recap = !gpu.Covers(hm);   // 取り込みは同じ GPU のモニターを全部持つので、取り直すのは別の GPU のモニターへ出たときだけ
+        if (recap || moveWin)
         {
             double t0 = NowMs();
-            if (!gpu.EnsureFor(hm)) { Deactivate(); return; }
-            gpu.ReleaseSwap();   // サーフェスはモニターの大きさで作り直す
-            g_ri.valid = false;
-            gpu.haveFrame = false;
-            gpu.Capture(200);
-            const RECT& mr = gpu.monRect;
-            SetWindowPos(g.hwnd, HWND_TOPMOST, mr.left, mr.top, mr.right - mr.left, mr.bottom - mr.top, SWP_NOACTIVATE);
+            if (recap)
+            {
+                if (!gpu.EnsureFor(hm)) { Deactivate(); return; }
+                gpu.ReleaseSwap();   // サーフェスはモニターの大きさで作り直す
+                g_ri.valid = false;
+                gpu.haveFrame = false;
+                gpu.Capture(200);
+            }
+            if (moveWin)
+            {
+                gpu.winMon = hm;
+                gpu.RectOf(hm, gpu.winRect);
+                const RECT& wr = gpu.winRect;
+                SetWindowPos(g.hwnd, HWND_TOPMOST, wr.left, wr.top, wr.right - wr.left, wr.bottom - wr.top, SWP_NOACTIVATE);
+            }
             g_forceCommit = true;
-            Log(L"モニター切り替え: (%ld,%ld)-(%ld,%ld) %ux%u  %.1f ms", mr.left, mr.top, mr.right, mr.bottom, gpu.texW, gpu.texH, NowMs() - t0);
+            const RECT& mr = gpu.monRect;
+            Log(L"モニター切り替え(%s): (%ld,%ld)-(%ld,%ld) %ux%u  %.1f ms", recap ? (moveWin ? L"取り込みと窓" : L"取り込みのみ") : L"窓のみ", mr.left, mr.top, mr.right, mr.bottom, gpu.texW, gpu.texH, NowMs() - t0);
         }
     }
     FrameSurface(tA);
@@ -1795,6 +2009,8 @@ static void Deactivate()
     StopHook();
     UnregisterHotKey(g.hwnd, HOTKEY_EXIT);
     for (int i = 0; i < 3; ++i) UnregisterHotKey(g.hwnd, HOTKEY_PRESET1 + i);
+    UnregisterHotKey(g.hwnd, HOTKEY_LATCH);
+    g.latched = false;
     g_dragMode = 0;
     g_lensWd = 0;
     g_ptOn = false;
@@ -1823,6 +2039,7 @@ static void Activate()
     g_ri.valid = false;
     g.frozen = false;
     g_frozenA = false;
+    g.latched = false;
     g.anchor = c;
     g_actT = NowMs();
     g_gt = GpuTimer{};
@@ -1832,10 +2049,13 @@ static void Activate()
     g.active = true;
     gpu.haveFrame = false;
     gpu.Capture(200);   // 最初の1枚は待ってでも取る
-    const RECT& mr = gpu.monRect;
+    gpu.winMon = MonitorFromPoint(c, MONITOR_DEFAULTTOPRIMARY);
+    gpu.RectOf(gpu.winMon, gpu.winRect);
+    const RECT& mr = gpu.winRect;
     SetWindowPos(g.hwnd, HWND_TOPMOST, mr.left, mr.top, mr.right - mr.left, mr.bottom - mr.top, SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_FRAMECHANGED);
-    RegisterHotKey(g.hwnd, HOTKEY_EXIT, MOD_NOREPEAT, g_set.exitKey);
-    for (int i = 0; i < 3; ++i) RegisterHotKey(g.hwnd, HOTKEY_PRESET1 + i, MOD_NOREPEAT, '1' + i);
+    RegisterHotKey(g.hwnd, HOTKEY_EXIT, g_set.exitMods, g_set.exitKey);
+    for (int i = 0; i < 3; ++i) RegisterHotKey(g.hwnd, HOTKEY_PRESET1 + i, g_set.presetMods[i], g_set.presetKey[i]);
+    RegisterHotKey(g.hwnd, HOTKEY_LATCH, g_set.latchMods, g_set.latchKey);
     StartHook();
     g_raise = false;
     g_zHook = SetWinEventHook(EVENT_OBJECT_SHOW, EVENT_OBJECT_SHOW, nullptr, ZOrderEvent, 0, 0, WINEVENT_OUTOFCONTEXT);
@@ -1845,7 +2065,7 @@ static void Activate()
 // （別々だと最大でモニターの比率になり、戻すときも元の形に戻らない）
 static void FitLens()
 {
-    const int maxW = gpu.monRect.right - gpu.monRect.left, maxH = gpu.monRect.bottom - gpu.monRect.top;
+    const int maxW = gpu.winRect.right - gpu.winRect.left, maxH = gpu.winRect.bottom - gpu.winRect.top;
     g.lensW = std::max(g.lensW, 1);
     g.lensH = std::max(g.lensH, 1);
     if (g.lensW > maxW || g.lensH > maxH)
@@ -1897,6 +2117,15 @@ static void OnWheel(int delta, bool ctrl)
 // ---------------------------------------------------------------- タスクトレイ
 static UINT g_taskbarCreated = 0;   // エクスプローラーが再起動したときの通知。アイコンを付け直す
 
+// ツールチップの既定の文字にある起動キーを、今の起動キーに置き換える（[text] で書き換えた文字はそのまま）
+static std::wstring TrayTip()
+{
+    std::wstring t = g_set.txTip;
+    const size_t p = t.find(L"Win+Alt+Z");
+    if (p != std::wstring::npos) t.replace(p, 9, HotkeyName(g_set.toggleMods, g_set.toggleKey));
+    return t;
+}
+
 static void AddTray()
 {
     NOTIFYICONDATAW nid{};
@@ -1906,7 +2135,7 @@ static void AddTray()
     nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
     nid.uCallbackMessage = WM_APP_TRAY;
     nid.hIcon = (HICON)LoadImageW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(1), IMAGE_ICON, GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR);   // exe に埋め込んだアイコン(assets/HiResLoupe.rc)
-    wcscpy_s(nid.szTip, g_set.txTip.c_str());
+    wcsncpy_s(nid.szTip, TrayTip().c_str(), _TRUNCATE);
     Shell_NotifyIconW(NIM_ADD, &nid);
 }
 
@@ -1917,7 +2146,7 @@ static void UpdateTrayTip()
     nid.hWnd = g.hwnd;
     nid.uID = 1;
     nid.uFlags = NIF_TIP;
-    wcscpy_s(nid.szTip, g_set.txTip.c_str());
+    wcsncpy_s(nid.szTip, TrayTip().c_str(), _TRUNCATE);
     Shell_NotifyIconW(NIM_MODIFY, &nid);
 }
 
@@ -2011,10 +2240,237 @@ static HWND MenuOwner()
     return s_owner ? s_owner : g.hwnd;
 }
 
+// ---------------------------------------------------------------- ショートカットの変更
+// 標準のホットキー入力欄(HOTKEY_CLASS)は Win キーを受け取れない（押すとスタートメニューに取られる）ので、
+// 窓が前面にある間だけキーボードのローレベルフックを入れて、押したキーをここで受けて握りつぶす（スタートメニューも開かない）
+static const UINT WM_APP_HKSHOW = WM_APP + 10;
+static HWND g_hkWnd = nullptr, g_hkCombo = nullptr, g_hkMsg = nullptr;
+static HHOOK g_kbHook = nullptr;
+static HFONT g_hkFont = nullptr, g_hkBig = nullptr;
+static int g_hkWhich = 0;                           // 0=出す・消す 1=閉じる 2=固定 3..5=形 1..3
+static UINT g_hkHeld = 0, g_hkMods = 0, g_hkKey = 0; // 押している修飾キー / 受けた組み合わせ
+enum { IDC_HK_SAVE = 1, IDC_HK_CANCEL, IDC_HK_DEFAULT };
+
+static UINT ModBit(DWORD vk)
+{
+    switch (vk)
+    {
+    case VK_LWIN: case VK_RWIN: return MOD_WIN;
+    case VK_LCONTROL: case VK_RCONTROL: case VK_CONTROL: return MOD_CONTROL;
+    case VK_LMENU: case VK_RMENU: case VK_MENU: return MOD_ALT;
+    case VK_LSHIFT: case VK_RSHIFT: case VK_SHIFT: return MOD_SHIFT;
+    }
+    return 0;
+}
+
+static LRESULT CALLBACK HotkeyKbHook(int code, WPARAM wp, LPARAM lp)
+{
+    if (code == HC_ACTION && g_hkWnd && GetForegroundWindow() == g_hkWnd)
+    {
+        const KBDLLHOOKSTRUCT* k = (const KBDLLHOOKSTRUCT*)lp;
+        const bool down = wp == WM_KEYDOWN || wp == WM_SYSKEYDOWN;
+        if (UINT bit = ModBit(k->vkCode))
+        {
+            if (down) { if (!(g_hkHeld & bit) && g_hkKey) g_hkKey = 0; g_hkHeld |= bit; }   // 決めたあとに修飾キーを押し直したら、やり直し
+            else g_hkHeld &= ~bit;
+            if (!g_hkKey) g_hkMods = g_hkHeld;
+        }
+        else if (down)
+        {
+            g_hkMods = g_hkHeld;
+            g_hkKey = k->vkCode;
+        }
+        PostMessageW(g_hkWnd, WM_APP_HKSHOW, 0, 0);
+        return 1;
+    }
+    return CallNextHookEx(nullptr, code, wp, lp);
+}
+
+static void HotkeyCurrent(int which, UINT& mods, UINT& key)
+{
+    if (which == 0) { mods = g_set.toggleMods; key = g_set.toggleKey; }
+    else if (which == 1) { mods = g_set.exitMods; key = g_set.exitKey; }
+    else if (which == 2) { mods = g_set.latchMods; key = g_set.latchKey; }
+    else { mods = g_set.presetMods[which - 3]; key = g_set.presetKey[which - 3]; }
+}
+
+static void HotkeyShow(const wchar_t* msg)
+{
+    SetWindowTextW(g_hkCombo, HotkeyName(g_hkMods, g_hkKey).c_str());
+    SetWindowTextW(g_hkMsg, msg ? msg : L"");
+}
+
+// 保存できれば true。だめなら理由を窓に出す
+static bool HotkeySave()
+{
+    const wchar_t* const* tx = kHkTexts[g_set.lang];
+    const UINT mods = (g_hkMods & (MOD_WIN | MOD_CONTROL | MOD_ALT | MOD_SHIFT)) | MOD_NOREPEAT, key = g_hkKey;
+    if (!key) return false;
+    const bool bare = (mods & ~MOD_NOREPEAT) == 0;
+    if (g_hkWhich == 0 && bare && !(key >= VK_F1 && key <= VK_F24)) { HotkeyShow(tx[10]); return false; }   // 出す・消すは常に登録しているので、1キーだけは断る
+    for (int i = 0; i < kNHk; ++i)
+    {
+        UINT m, k;
+        HotkeyCurrent(i, m, k);
+        if (i != g_hkWhich && m == mods && k == key) { HotkeyShow(tx[9]); return false; }
+    }
+    if (IsCommonShortcut(mods, key)) { HotkeyShow(tx[14]); return false; }
+    if (g_hkWhich == 0)
+    {
+        UnregisterHotKey(g.hwnd, HOTKEY_TOGGLE);
+        if (!RegisterHotKey(g.hwnd, HOTKEY_TOGGLE, mods, key))
+        {
+            RegisterHotKey(g.hwnd, HOTKEY_TOGGLE, g_set.toggleMods, g_set.toggleKey);
+            HotkeyShow(tx[8]);
+            return false;
+        }
+        g_set.toggleMods = mods; g_set.toggleKey = key;
+    }
+    else
+    {
+        // 閉じる・固定・形はルーペが出ている間だけ登録する。今使えるかだけ試す
+        if (!RegisterHotKey(g.hwnd, HOTKEY_TEST, mods, key)) { HotkeyShow(tx[8]); return false; }
+        UnregisterHotKey(g.hwnd, HOTKEY_TEST);
+        if (g_hkWhich == 1) { g_set.exitMods = mods; g_set.exitKey = key; }
+        else if (g_hkWhich == 2) { g_set.latchMods = mods; g_set.latchKey = key; }
+        else { g_set.presetMods[g_hkWhich - 3] = mods; g_set.presetKey[g_hkWhich - 3] = key; }
+    }
+    static const wchar_t* kIniKeys[kNHk] = { L"toggle", L"exit", L"latch", L"preset1", L"preset2", L"preset3" };
+    WritePrivateProfileStringW(L"hotkey", kIniKeys[g_hkWhich], HotkeyName(mods, key).c_str(), (g_dir + L"HiResLoupe.ini").c_str());
+    Log(L"ショートカットを変更 %s=%s", kIniKeys[g_hkWhich], HotkeyName(mods, key).c_str());
+    UpdateTrayTip();
+    return true;
+}
+
+static LRESULT CALLBACK HotkeyWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
+{
+    switch (msg)
+    {
+    case WM_APP_HKSHOW:
+        HotkeyShow(nullptr);
+        return 0;
+    case WM_ACTIVATE:
+        g_hkHeld = 0;   // 前面でない間の修飾キーは見ていないので、数え直す
+        return 0;
+    case WM_COMMAND:
+        if (LOWORD(wp) == IDC_HK_SAVE) { if (HotkeySave()) DestroyWindow(hwnd); }
+        else if (LOWORD(wp) == IDC_HK_CANCEL) DestroyWindow(hwnd);
+        else if (LOWORD(wp) == IDC_HK_DEFAULT)
+        {
+            static const wchar_t* kDefaults[kNHk] = { L"Win+Alt+Z", L"Esc", L"Ctrl+Space", L"1", L"2", L"3" };
+            ParseHotkey(kDefaults[g_hkWhich], g_hkMods, g_hkKey);
+            HotkeyShow(nullptr);
+        }
+        return 0;
+    case WM_CTLCOLORSTATIC:
+        SetBkMode((HDC)wp, TRANSPARENT);
+        if ((HWND)lp == g_hkMsg) SetTextColor((HDC)wp, RGB(200, 40, 40));
+        return (LRESULT)GetSysColorBrush(COLOR_WINDOW);
+    case WM_CLOSE:
+        DestroyWindow(hwnd);
+        return 0;
+    case WM_DESTROY:
+        if (g_kbHook) { UnhookWindowsHookEx(g_kbHook); g_kbHook = nullptr; }
+        if (g_hkFont) { DeleteObject(g_hkFont); g_hkFont = nullptr; }
+        if (g_hkBig) { DeleteObject(g_hkBig); g_hkBig = nullptr; }
+        g_hkWnd = nullptr;
+        return 0;
+    }
+    return DefWindowProcW(hwnd, msg, wp, lp);
+}
+
+static void OpenHotkeyDialog(int which)
+{
+    if (g_hkWnd) { SetForegroundWindow(g_hkWnd); return; }
+    if (g.active) Deactivate();   // ルーペの数字キー・Esc などを外しておく
+    g_hkWhich = which;
+    g_hkHeld = 0;
+    HotkeyCurrent(which, g_hkMods, g_hkKey);
+    g_hkMods &= ~MOD_NOREPEAT;
+
+    static bool registered = false;
+    if (!registered)
+    {
+        WNDCLASSW wc{};
+        wc.lpfnWndProc = HotkeyWndProc;
+        wc.hInstance = g_inst;
+        wc.lpszClassName = L"HiResLoupeHotkey";
+        wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+        wc.hbrBackground = GetSysColorBrush(COLOR_WINDOW);
+        wc.hIcon = LoadIconW(g_inst, MAKEINTRESOURCEW(1));
+        RegisterClassW(&wc);
+        registered = true;
+    }
+    POINT c;
+    GetCursorPos(&c);
+    HMONITOR mon = MonitorFromPoint(c, MONITOR_DEFAULTTONEAREST);
+    const UINT dpi = MonitorDpi(mon);
+    auto S = [&](int v) { return MulDiv(v, (int)dpi, 96); };
+    MONITORINFO mi{ sizeof mi };
+    GetMonitorInfoW(mon, &mi);
+    RECT rc{ 0, 0, S(380), S(170) };
+    const DWORD style = WS_POPUP | WS_CAPTION | WS_SYSMENU;
+    AdjustWindowRectExForDpi(&rc, style, FALSE, WS_EX_TOPMOST, dpi);
+    const int ww = rc.right - rc.left, wh = rc.bottom - rc.top;
+    const int x = (mi.rcWork.left + mi.rcWork.right - ww) / 2, y = (mi.rcWork.top + mi.rcWork.bottom - wh) / 2;
+    const wchar_t* const* tx = kHkTexts[g_set.lang];
+    g_hkWnd = CreateWindowExW(WS_EX_TOPMOST, L"HiResLoupeHotkey", (std::wstring(L"HiResLoupe - ") + HkLabel(which)).c_str(), style,
+                              x, y, ww, wh, nullptr, nullptr, g_inst, nullptr);
+    if (!g_hkWnd) return;
+
+    NONCLIENTMETRICSW ncm{ sizeof ncm };
+    SystemParametersInfoForDpi(SPI_GETNONCLIENTMETRICS, sizeof ncm, &ncm, 0, dpi);
+    g_hkFont = CreateFontIndirectW(&ncm.lfMessageFont);
+    LOGFONTW big = ncm.lfMessageFont;
+    big.lfHeight = big.lfHeight * 8 / 5;
+    big.lfWeight = FW_BOLD;
+    g_hkBig = CreateFontIndirectW(&big);
+    auto add = [&](const wchar_t* cls, const wchar_t* text, DWORD st, int x0, int y0, int w0, int h0, int id, HFONT f)
+    {
+        HWND h = CreateWindowExW(0, cls, text, WS_CHILD | WS_VISIBLE | st, S(x0), S(y0), S(w0), S(h0), g_hkWnd, (HMENU)(INT_PTR)id, g_inst, nullptr);
+        SendMessageW(h, WM_SETFONT, (WPARAM)f, TRUE);
+        return h;
+    };
+    add(L"STATIC", tx[4], SS_LEFT, 14, 12, 352, 20, 0, g_hkFont);
+    g_hkCombo = add(L"STATIC", L"", SS_CENTER | SS_CENTERIMAGE, 14, 36, 352, 34, 0, g_hkBig);
+    g_hkMsg = add(L"STATIC", L"", SS_LEFT, 14, 74, 352, 40, 0, g_hkFont);
+    add(L"BUTTON", tx[7], BS_PUSHBUTTON, 14, 126, 90, 30, IDC_HK_DEFAULT, g_hkFont);
+    add(L"BUTTON", tx[5], BS_DEFPUSHBUTTON, 180, 126, 90, 30, IDC_HK_SAVE, g_hkFont);
+    add(L"BUTTON", tx[6], BS_PUSHBUTTON, 276, 126, 90, 30, IDC_HK_CANCEL, g_hkFont);
+    HotkeyShow(nullptr);
+    g_kbHook = SetWindowsHookExW(WH_KEYBOARD_LL, HotkeyKbHook, g_inst, 0);
+    ShowWindow(g_hkWnd, SW_SHOW);
+    SetForegroundWindow(g_hkWnd);
+}
+
+// 全部のショートカットを一覧で出す。表示中もルーペの描画を続ける（トレイのメニューと同じタイマー）
+static void ShowShortcutList()
+{
+    const wchar_t* const* t = kListTexts[g_set.lang];
+    auto line = [](const std::wstring& k, const wchar_t* d) { return k + L"  :  " + d + L"\n"; };
+    std::wstring s = std::wstring(t[14]) + L"\n";
+    s += line(HotkeyName(g_set.toggleMods, g_set.toggleKey), t[1]);
+    s += line(HotkeyName(g_set.exitMods, g_set.exitKey), t[2]);
+    s += line(HotkeyName(g_set.latchMods, g_set.latchKey), t[3]);
+    for (int i = 0; i < 3; ++i)
+        s += line(HotkeyName(g_set.presetMods[i], g_set.presetKey[i]), (std::wstring(HkLabel(3 + i)) + t[12]).c_str());
+    s += L"\n" + std::wstring(t[15]) + L"\n";
+    s += line(t[13], t[2]);
+    s += line(t[4], t[5]);
+    s += line(t[6], (std::wstring(t[7]) + t[12]).c_str());
+    s += L"  " + std::wstring(t[16]) + L"\n";
+    s += line(t[10], t[11]);
+    s += line(t[8], t[9]);
+    SetTimer(g.hwnd, TIMER_MENU, USER_TIMER_MINIMUM, nullptr);
+    MessageBoxW(MenuOwner(), s.c_str(), (std::wstring(L"HiResLoupe - ") + t[0]).c_str(), MB_OK | MB_TOPMOST | MB_SETFOREGROUND);
+    KillTimer(g.hwnd, TIMER_MENU);
+}
+
 static void ShowTrayMenu()
 {
     HMENU m = CreatePopupMenu();
     AppendMenuW(m, MF_STRING, CMD_TOGGLE, (g.active ? g_set.txHide : g_set.txShow).c_str());
+    AppendMenuW(m, MF_STRING | (g_set.pinCursor ? MF_CHECKED : 0), CMD_PINCUR, g_set.txPinCur.c_str());
     AppendMenuW(m, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(m, MF_STRING, CMD_INI, g_set.txSettings.c_str());
     AppendMenuW(m, MF_STRING, CMD_RELOAD, g_set.txReload.c_str());
@@ -2024,6 +2480,15 @@ static void ShowTrayMenu()
     HMENU lm = CreatePopupMenu();
     for (int i = 0; i < 4; i++) AppendMenuW(lm, MF_STRING | (g_set.lang == i ? MF_CHECKED : 0), CMD_LANG + i, kLangNames[i]);
     AppendMenuW(m, MF_POPUP, (UINT_PTR)lm, g_set.txLang.c_str());
+    AppendMenuW(m, MF_STRING, CMD_LIST, kListTexts[g_set.lang][0]);
+    HMENU hm = CreatePopupMenu();
+    for (int i = 0; i < kNHk; i++)
+    {
+        UINT mods, key;
+        HotkeyCurrent(i, mods, key);
+        AppendMenuW(hm, MF_STRING, CMD_HK + i, (std::wstring(HkLabel(i)) + L"...\t" + HotkeyName(mods, key)).c_str());
+    }
+    AppendMenuW(m, MF_POPUP, (UINT_PTR)hm, kHkTexts[g_set.lang][0]);
     AppendMenuW(m, MF_STRING, CMD_QUIT, g_set.txQuit.c_str());
     POINT p;
     GetCursorPos(&p);
@@ -2080,6 +2545,12 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         case CMD_LOG: ShellExecuteW(nullptr, L"open", (g_dir + L"HiResLoupe.log").c_str(), nullptr, nullptr, SW_SHOWNORMAL); break;
         case CMD_RELOAD: ReloadSettings(); break;
         case CMD_STARTUP: SetStartup(!StartupRegistered()); break;
+        case CMD_LIST: ShowShortcutList(); break;
+        case CMD_HK: case CMD_HK + 1: case CMD_HK + 2: case CMD_HK + 3: case CMD_HK + 4: case CMD_HK + 5: OpenHotkeyDialog((int)(LOWORD(wp) - CMD_HK)); break;
+        case CMD_PINCUR:
+            g_set.pinCursor = !g_set.pinCursor;
+            WritePrivateProfileStringW(L"lens", L"pinned_cursor", g_set.pinCursor ? L"1" : L"0", (g_dir + L"HiResLoupe.ini").c_str());
+            break;
         case CMD_LANG: case CMD_LANG + 1: case CMD_LANG + 2: case CMD_LANG + 3:
             g_set.lang = (int)(LOWORD(wp) - CMD_LANG);
             WritePrivateProfileStringW(L"ui", L"language", kLangCodes[g_set.lang], (g_dir + L"HiResLoupe.ini").c_str());
@@ -2099,6 +2570,17 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     case WM_HOTKEY:
         if (wp == HOTKEY_TOGGLE || wp == HOTKEY_TOGGLE2) { if (g.active) Deactivate(); else Activate(); }
         else if (wp == HOTKEY_EXIT) Deactivate();
+        else if (wp == HOTKEY_LATCH && g.active)
+        {
+            g.latched = !g.latched;
+            if (g.latched) g.pin = POINT{ g_lensL + g_lensWd / 2, g_lensT + g_lensHt / 2 };   // 今のレンズの中心で止める
+            // 固定中は下のアプリでキーを打てるよう、数字キー（形のプリセット）を返す
+            for (int i = 0; i < 3; ++i)
+            {
+                if (g.latched) UnregisterHotKey(g.hwnd, HOTKEY_PRESET1 + i);
+                else RegisterHotKey(g.hwnd, HOTKEY_PRESET1 + i, g_set.presetMods[i], g_set.presetKey[i]);
+            }
+        }
         else if (wp >= HOTKEY_PRESET1 && wp < HOTKEY_PRESET1 + 3) { if (g.active) ApplyPreset((int)(wp - HOTKEY_PRESET1) + 1); }
         return 0;
     case WM_APP_WHEEL:
