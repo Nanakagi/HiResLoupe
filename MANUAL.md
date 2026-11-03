@@ -21,7 +21,7 @@ No installer: unzip the folder and run `HiResLoupe.exe`.
 
 ### Start and quit
 
-- **Start**: Double-click `HiResLoupe.exe` (the loupe appears right away; the app stays in the system tray). A short "How to use" window also appears in the middle of the main display; tick "Don't show again" to stop it from appearing at startup.
+- **Start**: Double-click `HiResLoupe.exe` (the loupe appears right away; the app stays in the system tray). A short "How to use" window also appears in the middle of the main display. Tick "Don't show again" to stop it from appearing at startup, and tick "Open at startup" in that window to show it at startup again.
 - **Show / hide the loupe**: `Win` + `Alt` + `Z`, or left-click the tray icon
 - **Hide the loupe only**: `Esc` or `Ctrl` + `Right-click` (a plain `Right-click` goes to the app underneath)
 - **Quit completely**: Right-click the tray icon, then "Quit" (menu names below are shown in English; they change with the selected language)
@@ -50,7 +50,7 @@ If you delete the folder without turning it off, an entry named "HiResLoupe" sta
 ### Changing shortcuts
 
 Right-click the tray icon, then "Change shortcuts", and choose the item to change. Press the new shortcut in the window that opens, then "Save" ("Default" restores the original key).
-You can change: show / hide loupe, close loupe, pin loupe, and the three shape presets. Shortcuts already used by another app or by HiResLoupe, and common ones such as `Ctrl` + `C`, cannot be chosen. The choice is saved in `[hotkey]` of `HiResLoupe.ini`.
+You can change: show / hide loupe, close loupe, pin loupe, and the three shape presets. Shortcuts already used by HiResLoupe for another action, and common ones such as `Ctrl` + `C`, cannot be chosen. A shortcut that another app is using is accepted, but it may not work while that app holds it. The show / hide key is refused in that case, so that the loupe can always be opened. The choice is saved in `[hotkey]` of `HiResLoupe.ini`.
 
 ### Settings
 
@@ -111,7 +111,7 @@ This app is an independent work and is not provided, endorsed or approved by NVI
 
 ### 起動・終了
 
-- **起動**: `HiResLoupe.exe` をダブルクリック(すぐルーペが出ます。タスクトレイに常駐します)。画面の真ん中に「使い方」の窓も出ます。「次回から表示しない」を押すと、起動時に出なくなります。
+- **起動**: `HiResLoupe.exe` をダブルクリック(すぐルーペが出ます。タスクトレイに常駐します)。画面の真ん中に「使い方」の窓も出ます。「次回から表示しない」を押すと、起動時に出なくなります。その窓の「起動と同時に開く」にチェックを入れると、また起動時に出ます。
 - **ルーペを出す / 消す**: `Win` + `Alt` + `Z`、またはトレイのアイコンを左クリック
 - **ルーペだけ消す**: `Esc` または `Ctrl` + `右クリック`(ただの `右クリック` は下のアプリに通ります)
 - **完全に終了**: トレイのアイコンを右クリック →「アプリを終了」
@@ -140,7 +140,7 @@ This app is an independent work and is not provided, endorsed or approved by NVI
 ### ショートカットを変える
 
 トレイのアイコンを右クリック →「ショートカットを変更」から、変えたい項目を選びます。開いた窓で新しいショートカットを押して「保存」を選びます(「初期値」で元に戻せます)。
-変えられるもの: ルーペを出す／消す・ルーペを閉じる・ルーペを固定・形のテンプレート3つ。ほかのアプリや HiResLoupe の別の操作が使っているもの、`Ctrl` + `C` のようによく使われるものは選べません。選んだキーは `HiResLoupe.ini` の `[hotkey]` に保存されます。
+変えられるもの: ルーペを出す／消す・ルーペを閉じる・ルーペを固定・形のテンプレート3つ。HiResLoupe の別の操作が使っているもの、`Ctrl` + `C` のようによく使われるものは選べません。ほかのアプリが使っているキーは選べますが、そのアプリが使っている間は効かないことがあります（出す・消すのキーだけは、ほかのアプリが使っていると選べません）。選んだキーは `HiResLoupe.ini` の `[hotkey]` に保存されます。
 
 ### 設定
 

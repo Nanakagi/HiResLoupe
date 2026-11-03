@@ -246,53 +246,62 @@ static const wchar_t* kListTexts[4][17] = {
 // 初回の使い方の文字（[text] では差し替えない）。0=題 1=本文 2=「わかった」 3=「次回から表示しない」
 static const wchar_t* kWelcomeTexts[4][4] = {
     { L"How to use HiResLoupe",
-      L"Win+Alt+Z   Show / hide the loupe (also from the tray icon)\n"
-      L"Esc   Close the loupe (or Ctrl+Right-click)\n"
+      L"{toggle}   Show / hide the loupe\n"
+      L"{exit}   Close the loupe (or Ctrl+Right-click)\n"
       L"Mouse wheel   Zoom (down = in, up = out)\n"
       L"Ctrl+Wheel   Loupe size\n"
-      L"Ctrl+Space   Pin the loupe in place (press again to unpin)\n\n"
+      L"{latch}   Pin the loupe in place (press again to unpin)\n\n"
       L"Scroll the wheel all the way up to 100%, and the screen looks almost the same as usual.\n"
-      L"Full list: tray icon > How to use.",
+      L"Full list: right-click the tray icon > How to use. Left-click the tray icon to show or hide the loupe too.",
       L"OK", L"Don't show again" },
     { L"高解像ルーペの使い方",
-      L"Win+Alt+Z   ルーペを出す／消す（トレイのアイコンからも）\n"
-      L"Esc   ルーペを閉じる（または Ctrl＋右クリック）\n"
+      L"{toggle}   ルーペを出す／消す\n"
+      L"{exit}   ルーペを閉じる（または Ctrl＋右クリック）\n"
       L"マウスのホイール   倍率を変える（下で拡大、上で縮小）\n"
       L"Ctrl＋ホイール   ルーペの大きさ\n"
-      L"Ctrl＋Space   ルーペをその場に固定（もう一度で解除）\n\n"
+      L"{latch}   ルーペをその場に固定（もう一度で解除）\n\n"
       L"ホイールを一番上まで回すと倍率が 100% になり、普段の画面とほぼ同じ見た目になります。\n"
-      L"全部の操作: トレイのアイコン →「使い方」。",
+      L"全部の操作: トレイのアイコンを右クリック →「使い方」。トレイのアイコンを左クリックでも出し入れできます。",
       L"わかった", L"次回から表示しない" },
     { L"高解像放大镜的使用方法",
-      L"Win+Alt+Z   显示 / 隐藏放大镜（也可从托盘图标操作）\n"
-      L"Esc   关闭放大镜（或 Ctrl+右键）\n"
+      L"{toggle}   显示 / 隐藏放大镜\n"
+      L"{exit}   关闭放大镜（或 Ctrl+右键）\n"
       L"鼠标滚轮   缩放（向下放大，向上缩小）\n"
       L"Ctrl+滚轮   放大镜大小\n"
-      L"Ctrl+Space   将放大镜固定在原位（再按一次解除）\n\n"
+      L"{latch}   将放大镜固定在原位（再按一次解除）\n\n"
       L"把滚轮一直向上转到 100%，画面就和平时几乎一样。\n"
-      L"完整列表：托盘图标 >“快捷键一览”。",
+      L"完整列表：右键托盘图标 >“使用方法”。左键托盘图标也可以显示或隐藏放大镜。",
       L"知道了", L"下次不再显示" },
     { L"HiResLoupe 사용법",
-      L"Win+Alt+Z   돋보기 표시 / 숨기기 (트레이 아이콘에서도 가능)\n"
-      L"Esc   돋보기 닫기 (또는 Ctrl+오른쪽 클릭)\n"
+      L"{toggle}   돋보기 표시 / 숨기기\n"
+      L"{exit}   돋보기 닫기 (또는 Ctrl+오른쪽 클릭)\n"
       L"마우스 휠   배율 (아래로 확대, 위로 축소)\n"
       L"Ctrl+휠   돋보기 크기\n"
-      L"Ctrl+Space   돋보기를 제자리에 고정 (다시 누르면 해제)\n\n"
+      L"{latch}   돋보기를 제자리에 고정 (다시 누르면 해제)\n\n"
       L"휠을 맨 위까지 올려 100%로 두면 화면이 평소와 거의 같아집니다.\n"
-      L"전체 목록: 트레이 아이콘 >「단축키 목록」.",
+      L"전체 목록: 트레이 아이콘을 오른쪽 클릭 >「사용법」. 왼쪽 클릭으로도 돋보기를 표시하거나 숨길 수 있습니다.",
       L"확인", L"다음부터 표시 안 함" },
 };
 
 // 使い方の窓。画面 1（主モニター）の真ん中に、最前面で出す。ボタンは「わかった」と「次回から表示しない」
 static HWND g_welcomeWnd = nullptr;
 static HFONT g_welcomeFonts[3] = {};   // 0=見出し 1=本文・ボタン 2=ショートカットのキー（太字・2pt 大きい）
-static const int kWelcomeOk = 100, kWelcomeNever = 101;
+static const int kWelcomeOk = 100, kWelcomeNever = 101, kWelcomeAtStart = 102;
+// 「起動と同時に開く」（チェックボックス。オンなら次回から起動時に出す）
+static const wchar_t* const kOpenAtStart[4] = { L"Open at startup", L"起動と同時に開く", L"启动时打开", L"시작할 때 열기" };
 
 static LRESULT CALLBACK WelcomeProc(HWND h, UINT msg, WPARAM wp, LPARAM lp)
 {
     switch (msg)
     {
     case WM_COMMAND:
+        if (LOWORD(wp) == kWelcomeAtStart)
+        {
+            const bool on = SendMessageW((HWND)lp, BM_GETCHECK, 0, 0) == BST_CHECKED;
+            WritePrivateProfileStringW(L"ui", L"show_welcome", on ? L"1" : L"0", (g_dir + L"HiResLoupe.ini").c_str());
+            g_set.showWelcome = on;
+            return 0;
+        }
         if (LOWORD(wp) == kWelcomeNever)
         {
             WritePrivateProfileStringW(L"ui", L"show_welcome", L"0", (g_dir + L"HiResLoupe.ini").c_str());
@@ -417,11 +426,12 @@ static void ShowHelpWindow(const wchar_t* caption, const wchar_t* title, const s
     child(L"STATIC", title, SS_LEFT, pad, pad, tw, titleH, 0, g_welcomeFonts[0]);
     int ry = pad + titleH + gap;
     for (const Row& r : rows)
-    {
-        if (!r.key.empty()) child(L"STATIC", r.key.c_str(), SS_LEFT, pad, ry, keyColW, r.h, 0, g_welcomeFonts[2]);
+    {        if (!r.key.empty()) child(L"STATIC", r.key.c_str(), SS_LEFT, pad, ry, keyColW, r.h, 0, g_welcomeFonts[2]);
         if (!r.desc.empty()) child(L"STATIC", r.desc.c_str(), SS_LEFT, pad + (r.key.empty() ? 0 : keyColW), ry, r.key.empty() ? tw : descW, r.h, 0, g_welcomeFonts[1]);
         ry += r.h + rowGap;
     }
+    HWND atStart = child(L"BUTTON", kOpenAtStart[g_set.lang], BS_AUTOCHECKBOX | BS_VCENTER, pad, btnY, S(420), btnH, kWelcomeAtStart, g_welcomeFonts[1]);
+    SendMessageW(atStart, BM_SETCHECK, g_set.showWelcome ? BST_CHECKED : BST_UNCHECKED, 0);
     if (withNever) child(L"BUTTON", tx[3], BS_PUSHBUTTON, cw - pad - 2 * btnW - gap, btnY, btnW, btnH, kWelcomeNever, g_welcomeFonts[1]);
     HWND ok = child(L"BUTTON", tx[2], BS_DEFPUSHBUTTON, cw - pad - btnW, btnY, btnW, btnH, kWelcomeOk, g_welcomeFonts[1]);
     ShowWindow(h, SW_SHOW);
@@ -431,10 +441,21 @@ static void ShowHelpWindow(const wchar_t* caption, const wchar_t* title, const s
 
 static const wchar_t* const kCaptions[4] = { L"How to use", L"使い方", L"使用方法", L"사용법" };   // 使い方の窓の名前（タイトルバー）
 
+// 使い方の本文の {toggle} などを、今のショートカット（ini や変更したもの）に置き換える
+static std::wstring ReplaceAll(std::wstring s, const std::wstring& from, const std::wstring& to)
+{
+    for (size_t p = 0; (p = s.find(from, p)) != std::wstring::npos; p += to.size()) s.replace(p, from.size(), to);
+    return s;
+}
+
 static void ShowWelcome()
 {
     const wchar_t* const* tx = kWelcomeTexts[g_set.lang];
-    ShowHelpWindow(kCaptions[g_set.lang], tx[0], tx[1], 2, true);
+    std::wstring body = tx[1];
+    body = ReplaceAll(body, L"{toggle}", HotkeyName(g_set.toggleMods, g_set.toggleKey));
+    body = ReplaceAll(body, L"{exit}", HotkeyName(g_set.exitMods, g_set.exitKey));
+    body = ReplaceAll(body, L"{latch}", HotkeyName(g_set.latchMods, g_set.latchKey));
+    ShowHelpWindow(kCaptions[g_set.lang], tx[0], body, 2, true);
 }
 
 // "ja" などの文字列から言語番号へ。空や不明なら Windows の表示言語（日・中・韓以外は英語）
@@ -2524,9 +2545,8 @@ static bool HotkeySave()
     }
     else
     {
-        // 閉じる・固定・形はルーペが出ている間だけ登録する。今使えるかだけ試す
-        if (!RegisterHotKey(g.hwnd, HOTKEY_TEST, mods, key)) { HotkeyShow(tx[8]); return false; }
-        UnregisterHotKey(g.hwnd, HOTKEY_TEST);
+        // 閉じる・固定・形はルーペが出ている間だけ登録する。ほかのアプリが同じキーを使っていても断らず、そのまま保存する
+        // （そのときは効かないことがある。断るのは、よく使われるキー（IsCommonShortcut）と、HiResLoupe の別の操作と同じキーだけ）
         if (g_hkWhich == 1) { g_set.exitMods = mods; g_set.exitKey = key; }
         else if (g_hkWhich == 2) { g_set.latchMods = mods; g_set.latchKey = key; }
         else { g_set.presetMods[g_hkWhich - 3] = mods; g_set.presetKey[g_hkWhich - 3] = key; }
