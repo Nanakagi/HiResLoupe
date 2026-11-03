@@ -35,7 +35,7 @@ Magnification uses the super resolution of the NVIDIA RTX Video SDK.</p>
 </ul>
 <h3>Start and quit</h3>
 <ul>
-<li><strong>Start</strong>: Double-click <code>HiResLoupe.exe</code> (the loupe appears right away; the app stays in the system tray)</li>
+<li><strong>Start</strong>: Double-click <code>HiResLoupe.exe</code> (the loupe appears right away; the app stays in the system tray). A short "How to use" window also appears in the middle of the main display; tick "Don't show again" to stop it from appearing at startup.</li>
 <li><strong>Show / hide the loupe</strong>: <code>Win</code> + <code>Alt</code> + <code>Z</code>, or left-click the tray icon</li>
 <li><strong>Hide the loupe only</strong>: <code>Esc</code> or <code>Ctrl</code> + <code>Right-click</code> (a plain <code>Right-click</code> goes to the app underneath)</li>
 <li><strong>Quit completely</strong>: Right-click the tray icon, then "Quit" (menu names below are shown in English; they change with the selected language)</li>
@@ -52,7 +52,7 @@ Magnification uses the super resolution of the NVIDIA RTX Video SDK.</p>
 <li><strong>Resize by dragging the frame</strong>: <code>Ctrl</code> + <code>Drag the frame</code> of the loupe</li>
 <li><strong>Shape presets</strong>: <code>1</code> = square / <code>2</code> = wide 16:9 / <code>3</code> = tall 16:9</li>
 <li><strong>Pin the loupe in place</strong>: <code>Ctrl</code> + <code>Space</code> (press again to unpin). Only the loupe stops; its view keeps following the mouse, so you can move the pointer anywhere and read it in the pinned loupe. Handy for apps or old games that are hard to magnify.</li>
-<li><strong>Shortcut list</strong>: Right-click the tray icon, then "Shortcut list"</li>
+<li><strong>How to use</strong>: Right-click the tray icon, then "How to use". It lists all the shortcuts.</li>
 </ul>
 <ul>
 <li>Clicks and right-clicks pass through the loupe to the app underneath. The wheel and the number keys <code>1</code> to <code>3</code> are used for the loupe while it is shown.</li>
@@ -72,7 +72,6 @@ show_loupe=Show loupe
 hide_loupe=Hide loupe
 open_settings_file=Open settings file
 reload_settings=Reload settings
-open_log=Open log
 start_with_windows=Start with Windows
 language=Language
 quit=Quit
@@ -81,14 +80,14 @@ tray_tooltip=HiResLoupe (Win+Alt+Z)</code></pre>
 <ul>
 <li>Each key is named after the English menu item it changes. <code>show_loupe</code> is the menu text while the loupe is hidden, and <code>hide_loupe</code> while it is visible.</li>
 <li><code>language</code> is the name of the "Language" item, <code>pinned_cursor</code> is the "Show pointer in pinned loupe" item, and <code>tray_tooltip</code> is the text shown when you hover over the tray icon.</li>
-<li>The "Change shortcuts" and "Shortcut list" texts cannot be changed here.</li>
+<li>The "Change shortcuts" and "How to use" texts cannot be changed here.</li>
 <li>Do not write notes after a value on the same line; everything to the end of the line is read as the text.</li>
 </ul>
 <h3>Troubleshooting</h3>
 <ul>
 <li>**The loupe does not appear with <code>Win</code> + <code>Alt</code> + <code>Z</code>**: Another app is using the same key. Change it with "Change shortcuts" in the tray menu (or <code>[hotkey]</code> in <code>HiResLoupe.ini</code>). You can also left-click the tray icon to show it.</li>
 <li><strong>Edges look blurry</strong>: Super resolution does not work at low magnification. Use 175% or higher.</li>
-<li><strong>It runs strangely</strong>: Set <code>log_timing</code> to <code>1</code> in <code>HiResLoupe.ini</code>, start the app, then open <code>HiResLoupe.log</code> from "Open log" in the tray menu. (The log is written in Japanese.)</li>
+<li><strong>It runs strangely</strong>: Set <code>log_timing</code> to <code>1</code> in <code>HiResLoupe.ini</code>, start the app, then open <code>HiResLoupe.log</code> in the folder with <code>HiResLoupe.exe</code>. (The log is written in Japanese.)</li>
 </ul>
 <h3>License and notices</h3>
 <p>The source code and the app are released under the MIT License. <code>nvngx_vsr.dll</code> follows NVIDIA's terms. Please read <code>LICENSE</code> and <code>NOTICE.txt</code>.</p>
@@ -108,7 +107,7 @@ This app is an independent work and is not provided, endorsed or approved by NVI
 </ul>
 <h3>起動・終了</h3>
 <ul>
-<li><strong>起動</strong>: <code>HiResLoupe.exe</code> をダブルクリック(すぐルーペが出ます。タスクトレイに常駐します)</li>
+<li><strong>起動</strong>: <code>HiResLoupe.exe</code> をダブルクリック(すぐルーペが出ます。タスクトレイに常駐します)。画面の真ん中に「使い方」の窓も出ます。「次回から表示しない」を押すと、起動時に出なくなります。</li>
 <li><strong>ルーペを出す / 消す</strong>: <code>Win</code> + <code>Alt</code> + <code>Z</code>、またはトレイのアイコンを左クリック</li>
 <li><strong>ルーペだけ消す</strong>: <code>Esc</code> または <code>Ctrl</code> + <code>右クリック</code>(ただの <code>右クリック</code> は下のアプリに通ります)</li>
 <li><strong>完全に終了</strong>: トレイのアイコンを右クリック →「アプリを終了」</li>
@@ -125,7 +124,7 @@ This app is an independent work and is not provided, endorsed or approved by NVI
 <li><strong>枠をつかんで大きさを変える</strong>: <code>Ctrl</code> + ルーペの <code>枠をドラッグ</code></li>
 <li><strong>形のテンプレート</strong>: <code>1</code> = 正方形 / <code>2</code> = 横長 16:9 / <code>3</code> = 縦長 16:9</li>
 <li><strong>ルーペをその場に固定する</strong>: <code>Ctrl</code> + <code>Space</code>(もう一度押すと解除)。止まるのはルーペの窓だけで、中身はマウスのまわりを映し続けます。カーソルを好きな所へ動かして、固定したルーペで読めます。拡大しにくいアプリや昔のゲームの文字を読むときに便利です。</li>
-<li><strong>ショートカット一覧</strong>: トレイのアイコンを右クリック →「ショートカット一覧」</li>
+<li><strong>使い方</strong>: トレイのアイコンを右クリック →「使い方」。すべてのショートカットを一覧できます。</li>
 </ul>
 <ul>
 <li>ルーペが出ている間も、クリックと右クリックは下のアプリに通ります。ただしホイールと数字キー <code>1</code>〜<code>3</code> はルーペの操作に使われます。</li>
@@ -145,7 +144,6 @@ show_loupe=ルーペを出す
 hide_loupe=ルーペを消す
 open_settings_file=設定ファイルを開く
 reload_settings=設定を再読み込み
-open_log=ログを開く
 start_with_windows=Windows と同時に起動
 language=言語
 quit=アプリを終了
@@ -154,14 +152,14 @@ tray_tooltip=高解像ルーペ (Win+Alt+Z)</code></pre>
 <ul>
 <li>キーの名前は、変えるメニュー項目の英語名です。<code>show_loupe</code> はルーペが消えているとき、<code>hide_loupe</code> はルーペが出ているときのメニューの文字です。</li>
 <li><code>language</code> は「言語」の項目の名前、<code>pinned_cursor</code> は「固定中のルーペにカーソルを出す」の項目、<code>tray_tooltip</code> はトレイのアイコンにマウスを重ねたときの文字です。</li>
-<li>「ショートカットを変更」と「ショートカット一覧」の文字は、ここでは変えられません。</li>
+<li>「ショートカットを変更」と「使い方」の文字は、ここでは変えられません。</li>
 <li>項目の右に説明を書かないでください(行の終わりまで文字として読まれます)。</li>
 </ul>
 <h3>困ったとき</h3>
 <ul>
 <li>**<code>Win</code> + <code>Alt</code> + <code>Z</code> で出ない**: 他のアプリが同じキーを使っています。トレイのメニュー「ショートカットを変更」(または <code>HiResLoupe.ini</code> の <code>[hotkey]</code>)で別のキーに変えてください。また、トレイのアイコンを左クリックすれば出せます。</li>
 <li><strong>輪郭がくっきりしない</strong>: 倍率が低いと超解像が働きません。175% 以上にしてください。</li>
-<li><strong>動きがおかしい</strong>: <code>HiResLoupe.ini</code> の <code>log_timing</code> を <code>1</code> にして起動し、トレイの「ログを開く」で <code>HiResLoupe.log</code> を見てください。</li>
+<li><strong>動きがおかしい</strong>: <code>HiResLoupe.ini</code> の <code>log_timing</code> を <code>1</code> にして起動し、exe と同じフォルダの <code>HiResLoupe.log</code> を開いてください。</li>
 </ul>
 <h3>ライセンス・表記</h3>
 <p>ソースコードとアプリ本体は MIT License で公開しています。<code>nvngx_vsr.dll</code> は NVIDIA の条件に従います。<code>LICENSE</code> と <code>NOTICE.txt</code> を読んでください。</p>

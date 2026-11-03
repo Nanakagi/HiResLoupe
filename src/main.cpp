@@ -41,8 +41,8 @@ static const int HOTKEY_LATCH = 7;     // 既定 Ctrl+Space（固定のオン/�
 static const int HOTKEY_TEST = 8;      // ショートカットの変更で、使えるかを試しに登録するだけ
 static const UINT_PTR CMD_HK = 120;    // CMD_HK + 0..5 = ショートカットの変更（出す・消す / 閉じる / 固定 / 形 1..3）
 static const int kNHk = 6;
-static const UINT_PTR CMD_LIST = 108;  // ショートカット一覧
-static const UINT_PTR CMD_TOGGLE = 101, CMD_INI = 102, CMD_LOG = 103, CMD_QUIT = 104, CMD_STARTUP = 105, CMD_RELOAD = 106, CMD_PINCUR = 107, CMD_LANG = 110;   // CMD_LANG + 0..3 = 言語の選択
+static const UINT_PTR CMD_LIST = 108;  // 使い方（ショートカット一覧）
+static const UINT_PTR CMD_TOGGLE = 101, CMD_INI = 102, CMD_QUIT = 104, CMD_STARTUP = 105, CMD_RELOAD = 106, CMD_PINCUR = 107, CMD_LANG = 110;   // CMD_LANG + 0..3 = 言語の選択
 
 // ---------------------------------------------------------------- 設定
 struct Settings
@@ -67,9 +67,10 @@ struct Settings
     int borderW = 4;             // 縁の太さ(px)
     bool pinCursor = true;       // 固定中、ルーペの中のマウスの点に自前のカーソルを出す（[lens] pinned_cursor。トレイから切り替え）。
                                  // 既定はオン: 固定したルーペの下に本物のカーソルが入ると、どこにあるか分からなくなるため
+    bool showWelcome = true;     // 起動のたびに使い方を出す。「次回から表示しない」で false（[ui] show_welcome）
     // トレイのメニューなどの文字（[text]。空欄なら英語の既定）
     int lang = 0;   // 0=English 1=日本語 2=中文(简体) 3=한국어（[ui] language。空欄なら Windows の表示言語）
-    std::wstring txShow, txHide, txSettings, txLog, txStartup, txQuit, txTip, txLang, txReload, txPinCur;
+    std::wstring txShow, txHide, txSettings, txStartup, txQuit, txTip, txLang, txReload, txPinCur;
 };
 
 static std::wstring g_dir;   // exe のあるフォルダ（末尾は \）
@@ -169,12 +170,12 @@ static bool ParseHotkey(std::wstring s, UINT& mods, UINT& key)
 // トレイのメニューなどの文字。言語ごとの表（[text] で個別に上書きできる）
 static const wchar_t* kLangCodes[4] = { L"en", L"ja", L"zh", L"ko" };
 static const wchar_t* kLangNames[4] = { L"English", L"日本語", L"中文(简体)", L"한국어" };   // 言語の一覧は常に自分の言語名で出す
-static const wchar_t* kTexts[4][10] = {
-    // show, hide, settings, log, startup, quit, tooltip, language, reload, pinned cursor
-    { L"Show loupe", L"Hide loupe", L"Open settings file", L"Open log", L"Start with Windows", L"Quit", L"HiResLoupe (Win+Alt+Z)", L"Language", L"Reload settings", L"Show pointer in pinned loupe" },
-    { L"ルーペを出す", L"ルーペを消す", L"設定ファイルを開く", L"ログを開く", L"Windows と同時に起動", L"アプリを終了", L"高解像ルーペ (Win+Alt+Z)", L"言語", L"設定を再読み込み", L"固定中のルーペにカーソルを出す" },
-    { L"显示放大镜", L"隐藏放大镜", L"打开设置文件", L"打开日志", L"随 Windows 启动", L"退出", L"HiResLoupe (Win+Alt+Z)", L"语言", L"重新加载设置", L"固定时在放大镜中显示指针" },
-    { L"돋보기 표시", L"돋보기 숨기기", L"설정 파일 열기", L"로그 열기", L"Windows와 함께 시작", L"종료", L"HiResLoupe (Win+Alt+Z)", L"언어", L"설정 다시 불러오기", L"고정 중 돋보기에 포인터 표시" },
+static const wchar_t* kTexts[4][9] = {
+    // show, hide, settings, startup, quit, tooltip, language, reload, pinned cursor
+    { L"Show loupe", L"Hide loupe", L"Open settings file", L"Start with Windows", L"Quit", L"HiResLoupe (Win+Alt+Z)", L"Language", L"Reload settings", L"Show pointer in pinned loupe" },
+    { L"ルーペを出す", L"ルーペを消す", L"設定ファイルを開く", L"Windows と同時に起動", L"アプリを終了", L"高解像ルーペ (Win+Alt+Z)", L"言語", L"設定を再読み込み", L"固定中のルーペにカーソルを出す" },
+    { L"显示放大镜", L"隐藏放大镜", L"打开设置文件", L"随 Windows 启动", L"退出", L"HiResLoupe (Win+Alt+Z)", L"语言", L"重新加载设置", L"固定时在放大镜中显示指针" },
+    { L"돋보기 표시", L"돋보기 숨기기", L"설정 파일 열기", L"Windows와 함께 시작", L"종료", L"HiResLoupe (Win+Alt+Z)", L"언어", L"설정 다시 불러오기", L"고정 중 돋보기에 포인터 표시" },
 };
 
 // ショートカットの変更の文字（[text] では差し替えない）
@@ -220,27 +221,221 @@ static const wchar_t* HkLabel(int i)
 // ショートカット一覧の文字（[text] では差し替えない）
 static const wchar_t* kListTexts[4][17] = {
     // title, toggle, exit, latch, wheel, ., ctrl+wheel, ., hold ctrl, ., ctrl+drag, ., not while pinned, ctrl+right-click, changeable, fixed, wheel while pinned
-    { L"Shortcut list", L"Show / hide loupe", L"Close loupe", L"Pin loupe in place (press again to unpin)",
+    { L"How to use", L"Show / hide loupe", L"Close loupe", L"Pin loupe in place (press again to unpin)",
       L"Wheel", L"Zoom (down = in, up = out)", L"Ctrl+Wheel", L"Resize loupe (down = larger)",
       L"Hold Ctrl", L"Freeze the view and move the pointer inside the magnified image", L"Ctrl+drag the frame", L"Resize loupe",
       L" (not while pinned)", L"Ctrl+Right-click", L"[Can be changed] (tray menu > Change shortcuts)", L"[Fixed]",
       L"While pinned: Ctrl+Wheel = zoom, Wheel = scroll the app underneath" },
-    { L"ショートカット一覧", L"ルーペを出す／消す", L"ルーペを閉じる", L"ルーペをその場に固定（もう一度で解除）",
+    { L"使い方", L"ルーペを出す／消す", L"ルーペを閉じる", L"ルーペをその場に固定（もう一度で解除）",
       L"ホイール", L"倍率（下で拡大、上で縮小）", L"Ctrl+ホイール", L"ルーペの大きさ（下で大きく）",
       L"Ctrl を押している間", L"絵を止め、拡大像の中でカーソルを動かす", L"Ctrl+枠をドラッグ", L"ルーペの大きさを変える",
       L"（固定中は使えない）", L"Ctrl+右クリック", L"【変更可能】（トレイのメニュー →「ショートカットを変更」）", L"【変更不可】",
       L"固定中: Ctrl+ホイールで倍率、ホイールは下のアプリのスクロール" },
-    { L"快捷键一览", L"显示/隐藏放大镜", L"关闭放大镜", L"将放大镜固定在原位（再按一次解除）",
+    { L"使用方法", L"显示/隐藏放大镜", L"关闭放大镜", L"将放大镜固定在原位（再按一次解除）",
       L"滚轮", L"缩放（向下放大，向上缩小）", L"Ctrl+滚轮", L"调整放大镜大小（向下变大）",
       L"按住 Ctrl", L"冻结画面，在放大图像中移动指针", L"Ctrl+拖动边框", L"调整放大镜大小",
       L"（固定时不可用）", L"Ctrl+右键", L"【可更改】（托盘菜单 →“更改快捷键”）", L"【不可更改】",
       L"固定时：Ctrl+滚轮调整缩放，滚轮用于滚动下方的应用" },
-    { L"단축키 목록", L"돋보기 표시/숨기기", L"돋보기 닫기", L"돋보기를 제자리에 고정(다시 누르면 해제)",
+    { L"사용법", L"돋보기 표시/숨기기", L"돋보기 닫기", L"돋보기를 제자리에 고정(다시 누르면 해제)",
       L"휠", L"배율(아래로 확대, 위로 축소)", L"Ctrl+휠", L"돋보기 크기(아래로 크게)",
       L"Ctrl 누르고 있기", L"화면을 멈추고 확대 이미지 안에서 포인터 이동", L"Ctrl+테두리 드래그", L"돋보기 크기 변경",
       L" (고정 중에는 사용 불가)", L"Ctrl+오른쪽 클릭", L"[변경 가능] (트레이 메뉴 → '단축키 변경')", L"[변경 불가]",
       L"고정 중: Ctrl+휠로 배율, 휠은 아래 앱 스크롤" },
 };
+
+// 初回の使い方の文字（[text] では差し替えない）。0=題 1=本文 2=「わかった」 3=「次回から表示しない」
+static const wchar_t* kWelcomeTexts[4][4] = {
+    { L"How to use HiResLoupe",
+      L"Win+Alt+Z   Show / hide the loupe (also from the tray icon)\n"
+      L"Esc   Close the loupe (or Ctrl+Right-click)\n"
+      L"Mouse wheel   Zoom (down = in, up = out)\n"
+      L"Ctrl+Wheel   Loupe size\n"
+      L"Ctrl+Space   Pin the loupe in place (press again to unpin)\n\n"
+      L"Scroll the wheel all the way up to 100%, and the screen looks almost the same as usual.\n"
+      L"Full list: tray icon > How to use.",
+      L"OK", L"Don't show again" },
+    { L"高解像ルーペの使い方",
+      L"Win+Alt+Z   ルーペを出す／消す（トレイのアイコンからも）\n"
+      L"Esc   ルーペを閉じる（または Ctrl＋右クリック）\n"
+      L"マウスのホイール   倍率を変える（下で拡大、上で縮小）\n"
+      L"Ctrl＋ホイール   ルーペの大きさ\n"
+      L"Ctrl＋Space   ルーペをその場に固定（もう一度で解除）\n\n"
+      L"ホイールを一番上まで回すと倍率が 100% になり、普段の画面とほぼ同じ見た目になります。\n"
+      L"全部の操作: トレイのアイコン →「使い方」。",
+      L"わかった", L"次回から表示しない" },
+    { L"高解像放大镜的使用方法",
+      L"Win+Alt+Z   显示 / 隐藏放大镜（也可从托盘图标操作）\n"
+      L"Esc   关闭放大镜（或 Ctrl+右键）\n"
+      L"鼠标滚轮   缩放（向下放大，向上缩小）\n"
+      L"Ctrl+滚轮   放大镜大小\n"
+      L"Ctrl+Space   将放大镜固定在原位（再按一次解除）\n\n"
+      L"把滚轮一直向上转到 100%，画面就和平时几乎一样。\n"
+      L"完整列表：托盘图标 >“快捷键一览”。",
+      L"知道了", L"下次不再显示" },
+    { L"HiResLoupe 사용법",
+      L"Win+Alt+Z   돋보기 표시 / 숨기기 (트레이 아이콘에서도 가능)\n"
+      L"Esc   돋보기 닫기 (또는 Ctrl+오른쪽 클릭)\n"
+      L"마우스 휠   배율 (아래로 확대, 위로 축소)\n"
+      L"Ctrl+휠   돋보기 크기\n"
+      L"Ctrl+Space   돋보기를 제자리에 고정 (다시 누르면 해제)\n\n"
+      L"휠을 맨 위까지 올려 100%로 두면 화면이 평소와 거의 같아집니다.\n"
+      L"전체 목록: 트레이 아이콘 >「단축키 목록」.",
+      L"확인", L"다음부터 표시 안 함" },
+};
+
+// 使い方の窓。画面 1（主モニター）の真ん中に、最前面で出す。ボタンは「わかった」と「次回から表示しない」
+static HWND g_welcomeWnd = nullptr;
+static HFONT g_welcomeFonts[3] = {};   // 0=見出し 1=本文・ボタン 2=ショートカットのキー（太字・2pt 大きい）
+static const int kWelcomeOk = 100, kWelcomeNever = 101;
+
+static LRESULT CALLBACK WelcomeProc(HWND h, UINT msg, WPARAM wp, LPARAM lp)
+{
+    switch (msg)
+    {
+    case WM_COMMAND:
+        if (LOWORD(wp) == kWelcomeNever)
+        {
+            WritePrivateProfileStringW(L"ui", L"show_welcome", L"0", (g_dir + L"HiResLoupe.ini").c_str());
+            g_set.showWelcome = false;
+        }
+        if (LOWORD(wp) == kWelcomeOk || LOWORD(wp) == kWelcomeNever) DestroyWindow(h);
+        return 0;
+    case WM_CLOSE:
+        DestroyWindow(h);
+        return 0;
+    case WM_DESTROY:
+        for (HFONT& f : g_welcomeFonts) { DeleteObject(f); f = nullptr; }
+        g_welcomeWnd = nullptr;
+        return 0;
+    }
+    return DefWindowProcW(h, msg, wp, lp);
+}
+
+// 使い方の窓（キーの列は太字で、本文より keyBoostPt 大きく）。withNever で「次回から表示しない」を付ける
+static void ShowHelpWindow(const wchar_t* caption, const wchar_t* title, const std::wstring& body, int keyBoostPt, bool withNever)
+{
+    if (g_welcomeWnd) DestroyWindow(g_welcomeWnd);
+    static bool registered = false;
+    if (!registered)
+    {
+        WNDCLASSW wc{};
+        wc.lpfnWndProc = WelcomeProc;
+        wc.hInstance = GetModuleHandleW(nullptr);
+        wc.lpszClassName = L"HiResLoupeWelcome";
+        wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+        wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+        registered = RegisterClassW(&wc) != 0;
+        if (!registered) return;
+    }
+
+    // 寸法は主モニターの DPI に合わせる（この窓は主モニターの真ん中に出すため）
+    HMONITOR mon = MonitorFromPoint(POINT{ 0, 0 }, MONITOR_DEFAULTTOPRIMARY);
+    MONITORINFO mi{ sizeof mi };
+    GetMonitorInfoW(mon, &mi);
+    UINT dpiX = 96, dpiY = 96;
+    GetDpiForMonitor(mon, MDT_EFFECTIVE_DPI, &dpiX, &dpiY);
+    auto S = [&](int v) { return MulDiv(v, (int)dpiX, 96); };
+
+    const wchar_t* const* tx = kWelcomeTexts[g_set.lang];
+    // 本文は行ごとに分け、「キー」と「説明」に分ける（区切りは 3 つの空白。無ければ説明だけの行）
+    struct Row { std::wstring key, desc; int keyH = 0, descH = 0, h = 0; };
+    std::vector<Row> rows;
+    {
+        const std::wstring& s = body;
+        for (size_t start = 0; start <= s.size();)
+        {
+            size_t e = s.find(L'\n', start);
+            if (e == std::wstring::npos) e = s.size();
+            const std::wstring line = s.substr(start, e - start);
+            Row r;
+            const size_t sep = line.find(L"   ");
+            if (sep != std::wstring::npos) { r.key = line.substr(0, sep); r.desc = line.substr(sep + 3); }
+            else r.desc = line;
+            rows.push_back(r);
+            start = e + 1;
+        }
+    }
+
+    g_welcomeFonts[0] = CreateFontW(-S(33), 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Yu Gothic UI");
+    g_welcomeFonts[1] = CreateFontW(-S(22), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Yu Gothic UI");
+    g_welcomeFonts[2] = CreateFontW(-(S(22) + MulDiv(keyBoostPt, (int)dpiX, 72)), 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Yu Gothic UI");
+
+    const int pad = S(32), gap = S(20), btnW = S(240), btnH = S(54), rowGap = S(8);
+    const int cw = S(1000), tw = cw - 2 * pad;
+    HDC dc = GetDC(nullptr);
+    auto measure = [&](HFONT f, const std::wstring& s, int width)
+    {
+        RECT r{ 0, 0, width, 0 };
+        HGDIOBJ old = SelectObject(dc, f);
+        DrawTextW(dc, s.c_str(), -1, &r, DT_CALCRECT | DT_WORDBREAK | DT_NOPREFIX);
+        SelectObject(dc, old);
+        return (int)r.bottom;
+    };
+    const int titleH = measure(g_welcomeFonts[0], title, tw);
+
+    // キーの列の幅は、いちばん長いキーに合わせる（太字・大きい字で測る）
+    int keyColW = 0;
+    {
+        HGDIOBJ old = SelectObject(dc, g_welcomeFonts[2]);
+        for (const Row& r : rows)
+        {
+            SIZE sz{};
+            if (!r.key.empty() && GetTextExtentPoint32W(dc, r.key.c_str(), (int)r.key.size(), &sz)) keyColW = std::max<int>(keyColW, sz.cx + S(24));
+        }
+        SelectObject(dc, old);
+    }
+    const int descW = tw - keyColW;
+    int bodyH = 0;
+    for (Row& r : rows)
+    {
+        r.keyH = r.key.empty() ? 0 : measure(g_welcomeFonts[2], r.key, tw);
+        r.descH = r.desc.empty() ? 0 : measure(g_welcomeFonts[1], r.desc, r.key.empty() ? tw : descW);
+        r.h = r.desc.empty() ? S(12) : std::max(r.keyH, r.descH);   // 空行は少しの隙間
+        bodyH += r.h;
+    }
+    bodyH += rowGap * (int)(rows.size() - 1);
+    ReleaseDC(nullptr, dc);
+
+    const int btnY = pad + titleH + gap + bodyH + gap;
+    RECT rc{ 0, 0, cw, btnY + btnH + pad };
+    AdjustWindowRectEx(&rc, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, FALSE, WS_EX_TOPMOST);
+    const int ww = rc.right - rc.left, wh = rc.bottom - rc.top;
+    const int x = mi.rcMonitor.left + (mi.rcMonitor.right - mi.rcMonitor.left - ww) / 2;
+    const int y = mi.rcMonitor.top + (mi.rcMonitor.bottom - mi.rcMonitor.top - wh) / 2;
+
+    HINSTANCE inst = GetModuleHandleW(nullptr);
+    g_welcomeWnd = CreateWindowExW(WS_EX_TOPMOST, L"HiResLoupeWelcome", caption, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
+                                   x, y, ww, wh, nullptr, nullptr, inst, nullptr);
+    if (!g_welcomeWnd) return;
+    HWND h = g_welcomeWnd;
+    auto child = [&](const wchar_t* cls, const wchar_t* text, DWORD style, int l, int t, int w, int hh, int id, HFONT f)
+    {
+        HWND c = CreateWindowExW(0, cls, text, WS_CHILD | WS_VISIBLE | style, l, t, w, hh, h, (HMENU)(INT_PTR)id, inst, nullptr);
+        SendMessageW(c, WM_SETFONT, (WPARAM)f, TRUE);
+        return c;
+    };
+    child(L"STATIC", title, SS_LEFT, pad, pad, tw, titleH, 0, g_welcomeFonts[0]);
+    int ry = pad + titleH + gap;
+    for (const Row& r : rows)
+    {
+        if (!r.key.empty()) child(L"STATIC", r.key.c_str(), SS_LEFT, pad, ry, keyColW, r.h, 0, g_welcomeFonts[2]);
+        if (!r.desc.empty()) child(L"STATIC", r.desc.c_str(), SS_LEFT, pad + (r.key.empty() ? 0 : keyColW), ry, r.key.empty() ? tw : descW, r.h, 0, g_welcomeFonts[1]);
+        ry += r.h + rowGap;
+    }
+    if (withNever) child(L"BUTTON", tx[3], BS_PUSHBUTTON, cw - pad - 2 * btnW - gap, btnY, btnW, btnH, kWelcomeNever, g_welcomeFonts[1]);
+    HWND ok = child(L"BUTTON", tx[2], BS_DEFPUSHBUTTON, cw - pad - btnW, btnY, btnW, btnH, kWelcomeOk, g_welcomeFonts[1]);
+    ShowWindow(h, SW_SHOW);
+    SetForegroundWindow(h);
+    SetFocus(ok);
+}
+
+static const wchar_t* const kCaptions[4] = { L"How to use", L"使い方", L"使用方法", L"사용법" };   // 使い方の窓の名前（タイトルバー）
+
+static void ShowWelcome()
+{
+    const wchar_t* const* tx = kWelcomeTexts[g_set.lang];
+    ShowHelpWindow(kCaptions[g_set.lang], tx[0], tx[1], 2, true);
+}
 
 // "ja" などの文字列から言語番号へ。空や不明なら Windows の表示言語（日・中・韓以外は英語）
 static int LangFromName(std::wstring t)
@@ -259,12 +454,12 @@ static int LangFromName(std::wstring t)
 static void LoadTexts()
 {
     std::wstring ini = g_dir + L"HiResLoupe.ini";
-    std::wstring* dst[10] = { &g_set.txShow, &g_set.txHide, &g_set.txSettings, &g_set.txLog, &g_set.txStartup, &g_set.txQuit, &g_set.txTip, &g_set.txLang, &g_set.txReload, &g_set.txPinCur };
-    static const wchar_t* keys[10] = { L"show_loupe", L"hide_loupe", L"open_settings_file", L"open_log", L"start_with_windows", L"quit", L"tray_tooltip", L"language", L"reload_settings", L"pinned_cursor" };
+    std::wstring* dst[9] = { &g_set.txShow, &g_set.txHide, &g_set.txSettings, &g_set.txStartup, &g_set.txQuit, &g_set.txTip, &g_set.txLang, &g_set.txReload, &g_set.txPinCur };
+    static const wchar_t* keys[9] = { L"show_loupe", L"hide_loupe", L"open_settings_file", L"start_with_windows", L"quit", L"tray_tooltip", L"language", L"reload_settings", L"pinned_cursor" };
     // [text]: メモ帳が UTF-8 で保存してもそのまま読めるよう、バイト列で取って UTF-8 → だめなら ANSI の順に解釈する
     char iniA[MAX_PATH * 2];
     WideCharToMultiByte(CP_ACP, 0, ini.c_str(), -1, iniA, sizeof iniA, nullptr, nullptr);
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < 9; i++)
     {
         *dst[i] = kTexts[g_set.lang][i];
         char buf[256];
@@ -316,6 +511,7 @@ static void LoadSettings()
     g_set.pad = std::clamp(num(L"debug", L"pad", 8), 0, 32) / 4 * 4;
 
     g_set.lang = LangFromName(str(L"ui", L"language", L""));
+    g_set.showWelcome = num(L"ui", L"show_welcome", 1) != 0;
     LoadTexts();
 }
 
@@ -2443,11 +2639,11 @@ static void OpenHotkeyDialog(int which)
     SetForegroundWindow(g_hkWnd);
 }
 
-// 全部のショートカットを一覧で出す。表示中もルーペの描画を続ける（トレイのメニューと同じタイマー）
+// 全部のショートカットを「使い方」の窓で一覧にする（キーは太字・1pt 大きく）。窓は出ている間もルーペの描画が続く
 static void ShowShortcutList()
 {
     const wchar_t* const* t = kListTexts[g_set.lang];
-    auto line = [](const std::wstring& k, const wchar_t* d) { return k + L"  :  " + d + L"\n"; };
+    auto line = [](const std::wstring& k, const wchar_t* d) { return k + L"   " + d + L"\n"; };
     std::wstring s = std::wstring(t[14]) + L"\n";
     s += line(HotkeyName(g_set.toggleMods, g_set.toggleKey), t[1]);
     s += line(HotkeyName(g_set.exitMods, g_set.exitKey), t[2]);
@@ -2461,9 +2657,9 @@ static void ShowShortcutList()
     s += L"  " + std::wstring(t[16]) + L"\n";
     s += line(t[10], t[11]);
     s += line(t[8], t[9]);
-    SetTimer(g.hwnd, TIMER_MENU, USER_TIMER_MINIMUM, nullptr);
-    MessageBoxW(MenuOwner(), s.c_str(), (std::wstring(L"HiResLoupe - ") + t[0]).c_str(), MB_OK | MB_TOPMOST | MB_SETFOREGROUND);
-    KillTimer(g.hwnd, TIMER_MENU);
+    if (!s.empty()) s.pop_back();   // 最後の改行
+    const std::wstring caption = std::wstring(L"HiResLoupe - ") + t[0];
+    ShowHelpWindow(caption.c_str(), t[0], s, 1, false);
 }
 
 static void ShowTrayMenu()
@@ -2474,7 +2670,6 @@ static void ShowTrayMenu()
     AppendMenuW(m, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(m, MF_STRING, CMD_INI, g_set.txSettings.c_str());
     AppendMenuW(m, MF_STRING, CMD_RELOAD, g_set.txReload.c_str());
-    AppendMenuW(m, MF_STRING, CMD_LOG, g_set.txLog.c_str());
     AppendMenuW(m, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(m, MF_STRING | (StartupRegistered() ? MF_CHECKED : 0), CMD_STARTUP, g_set.txStartup.c_str());
     HMENU lm = CreatePopupMenu();
@@ -2542,7 +2737,6 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         {
         case CMD_TOGGLE: ToggleLoupe(); break;
         case CMD_INI: ShellExecuteW(nullptr, L"open", (g_dir + L"HiResLoupe.ini").c_str(), nullptr, nullptr, SW_SHOWNORMAL); break;
-        case CMD_LOG: ShellExecuteW(nullptr, L"open", (g_dir + L"HiResLoupe.log").c_str(), nullptr, nullptr, SW_SHOWNORMAL); break;
         case CMD_RELOAD: ReloadSettings(); break;
         case CMD_STARTUP: SetStartup(!StartupRegistered()); break;
         case CMD_LIST: ShowShortcutList(); break;
@@ -2885,7 +3079,12 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int)
     Log(L"起動 toggle=%s toggle2=%s", ok1 ? L"OK" : L"NG", ok2 ? L"OK" : L"NG");
     if (StartupRegistered()) SetStartup(true);   // exe を動かしたあとでも、今の場所で登録し直す
     // exe を起動した直後からレンズを出す（トレイ・ホットキーでの切り替えはその後も使える）。Windows 起動時の自動起動(--startup)ではトレイだけ
-    if (!wcsstr(GetCommandLineW(), L"--startup")) Activate();
+    // 使い方の窓は、レンズと並べて出す。--startup では出さない
+    if (!wcsstr(GetCommandLineW(), L"--startup"))
+    {
+        Activate();
+        if (g_set.showWelcome) ShowWelcome();
+    }
 
     MSG msg;
     for (;;)
