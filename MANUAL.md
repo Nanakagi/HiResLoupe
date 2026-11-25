@@ -13,9 +13,12 @@ Magnification uses the super resolution of the NVIDIA RTX Video SDK.
 
 No installer: unzip the folder and run `HiResLoupe.exe`.
 
+**Type**: Freeware (free of charge). See "License and third-party components" below.
+
 ### Requirements
 
 - An NVIDIA RTX series GPU
+- NVIDIA graphics driver R550.50 or later. Get the latest driver from NVIDIA's website (https://www.nvidia.com/en-us/drivers/) or the NVIDIA App.
 - Windows 11 (tested). Windows 10 (version 2004 or later) is untested, but it may work. If you try it on Windows 10, please tell us the result at https://github.com/Nanakagi/HiResLoupe/issues : your Windows version, GPU and driver version, and whether it worked.
 - `nvngx_vsr.dll` and `HiResLoupe.ini` in the same folder as `HiResLoupe.exe`
 
@@ -32,6 +35,8 @@ No installer: unzip the folder and run `HiResLoupe.exe`.
 Quit the app from the tray menu, turn off "Start with Windows" if you had turned it on, then delete the folder.
 
 If you delete the folder without turning it off, an entry named "HiResLoupe" stays in the startup list. It does no harm: if you use the app again, that entry is simply reused.
+
+Because there is no installer, HiResLoupe does not appear in "Installed apps" (Add or remove programs) of Windows. Deleting the folder is all you need.
 
 ### Controls
 
@@ -85,9 +90,25 @@ tray_tooltip=HiResLoupe (Win+Alt+Z)
 - **Edges look blurry**: Super resolution does not work at low magnification. Use 175% or higher.
 - **It runs strangely**: Set `log_timing` to `1` in `HiResLoupe.ini`, start the app, then open `HiResLoupe.log` in the folder with `HiResLoupe.exe`. (The log is written in Japanese.)
 
-### License and notices
+### Security software
 
-The source code and the app are released under the MIT License. `nvngx_vsr.dll` follows NVIDIA's terms. Please read `LICENSE` and `NOTICE.txt`.
+HiResLoupe captures the screen, and uses a mouse hook to follow the pointer and handle the frame of the loupe. While the "Change shortcuts" window is open, it also uses a keyboard hook to read the keys you press. Because of this, some security software may flag it as suspicious (like a key logger). HiResLoupe does not record or send your input, and it does not connect to the internet. The source code is public on GitHub.
+
+### Author and contact
+
+- Author: Nanakagi (七鍵)
+- Email: codemasa7@hotmail.com
+- Bug reports and requests: https://github.com/Nanakagi/HiResLoupe/issues (posting needs a GitHub account)
+- Latest version: https://github.com/Nanakagi/HiResLoupe/releases
+
+### License and third-party components
+
+HiResLoupe is freeware. The code written by the author is released under the MIT License (see `LICENSE`).
+
+The following parts are works of NVIDIA Corporation and are not covered by the MIT License. They are included as part of this app under the conditions of the NVIDIA RTX SDKs LICENSE (the license of the NVIDIA RTX Video SDK). They may not be distributed on their own. See `NOTICE.txt` for the main conditions.
+
+- `nvngx_vsr.dll` (super resolution): author NVIDIA Corporation. Bundled file.
+- NVIDIA RTX Video SDK library (`nvsdk_ngx_s.lib`) and sample code (`rtx_video_api_dx11_impl.cpp`): author NVIDIA Corporation. Built into `HiResLoupe.exe`.
 
 This app uses the NVIDIA RTX Video SDK. NVIDIA and NVIDIA RTX are trademarks or registered trademarks of NVIDIA Corporation.
 This app is an independent work and is not provided, endorsed or approved by NVIDIA.
@@ -103,9 +124,12 @@ This app is an independent work and is not provided, endorsed or approved by NVI
 
 インストールは要りません。zip を展開して `HiResLoupe.exe` を起動するだけで使えます。
 
+**取り扱い種別**: フリーソフト（無料）。詳しくは下の「ライセンス・同梱物」を見てください。
+
 ### 必要なもの
 
 - NVIDIA RTX シリーズの GPU
+- NVIDIA のグラフィックドライバー R550.50 以降。最新のドライバーは NVIDIA のサイト(https://www.nvidia.com/ja-jp/drivers/)か NVIDIA App から入手できます。
 - Windows 11(動作確認済み)。Windows 10(2004 以降)は未確認ですが、動く可能性があります。試した方は、Windows のバージョン、GPU とドライバーのバージョン、動いたかどうかを https://github.com/Nanakagi/HiResLoupe/issues で教えてください。
 - `HiResLoupe.exe` と同じフォルダに `nvngx_vsr.dll` と `HiResLoupe.ini`
 
@@ -122,6 +146,8 @@ This app is an independent work and is not provided, endorsed or approved by NVI
 トレイメニューからアプリを終了し、自動起動をオンにしていた場合はオフにしてから、フォルダごと削除してください。
 
 オフにせずにフォルダを消した場合、スタートアップに「HiResLoupe」という登録が残りますが、害はありません。再びこのアプリを使ったときに、その設定が再利用されるだけです。
+
+インストーラーを使っていないので、Windows の「インストールされているアプリ」(プログラムの追加と削除)には出てきません。フォルダを削除するだけで消せます。
 
 ### 操作
 
@@ -175,9 +201,25 @@ tray_tooltip=高解像ルーペ (Win+Alt+Z)
 - **輪郭がくっきりしない**: 倍率が低いと超解像が働きません。175% 以上にしてください。
 - **動きがおかしい**: `HiResLoupe.ini` の `log_timing` を `1` にして起動し、exe と同じフォルダの `HiResLoupe.log` を開いてください。
 
-### ライセンス・表記
+### ウイルス対策ソフトについて
 
-ソースコードとアプリ本体は MIT License で公開しています。`nvngx_vsr.dll` は NVIDIA の条件に従います。`LICENSE` と `NOTICE.txt` を読んでください。
+HiResLoupe は、画面を取り込み、マウスのフックでポインターを追ったりルーペの枠の操作を受けたりします。「ショートカットを変更」の窓が開いている間は、押したキーを読むためにキーボードのフックも使います。そのため、ウイルス対策ソフトによっては、キーロガーのような怪しい動きとして検出されることがあります。HiResLoupe は入力を記録・送信せず、インターネットにもつなぎません。ソースコードは GitHub で公開しています。
+
+### 作者・連絡先
+
+- 作者: Nanakagi(七鍵)
+- メール: codemasa7@hotmail.com
+- 不具合の報告・要望: https://github.com/Nanakagi/HiResLoupe/issues (書き込むには GitHub のアカウントが要ります)
+- 最新版: https://github.com/Nanakagi/HiResLoupe/releases
+
+### ライセンス・同梱物
+
+HiResLoupe はフリーソフトです。作者が書いた部分は MIT License で公開しています(`LICENSE` を参照)。
+
+次のものは NVIDIA Corporation の著作物で、MIT License の対象外です。NVIDIA RTX Video SDK のライセンス(NVIDIA RTX SDKs LICENSE)の条件に基づき、本アプリの一部として同梱しています。単体での再配布はできません。主な条件は `NOTICE.txt` を見てください。
+
+- `nvngx_vsr.dll`(超解像): 著作者 NVIDIA Corporation。同梱のファイル。
+- NVIDIA RTX Video SDK のライブラリ(`nvsdk_ngx_s.lib`)とサンプルコード(`rtx_video_api_dx11_impl.cpp`): 著作者 NVIDIA Corporation。`HiResLoupe.exe` に組み込み。
 
 本アプリは NVIDIA RTX Video SDK を使用しています。NVIDIA、NVIDIA RTX は NVIDIA Corporation の商標または登録商標です。
 本アプリは個人が作ったもので、NVIDIA が提供・推奨・承認したものではありません。

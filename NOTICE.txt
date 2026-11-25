@@ -9,8 +9,11 @@ NVIDIA and NVIDIA RTX are trademarks or registered trademarks of NVIDIA
 Corporation in the U.S. and other countries. This application is an
 independent work and is not provided, endorsed or approved by NVIDIA.
 
-The source code and the application itself are released under the MIT License
-(see LICENSE). The MIT License does not apply to nvngx_vsr.dll. This repository
+The code written by the author is released under the MIT License (see
+LICENSE). The MIT License does not apply to nvngx_vsr.dll, nor to the NVIDIA
+RTX Video SDK library (nvsdk_ngx_s.lib) and sample code
+(rtx_video_api_dx11_impl.cpp) built into HiResLoupe.exe; these are works of
+NVIDIA Corporation under the NVIDIA RTX SDKs LICENSE. This repository
 does not contain the NVIDIA RTX Video SDK or nvngx_vsr.dll. To build the
 application you must obtain the SDK from NVIDIA and accept its license.
 
@@ -24,8 +27,11 @@ NVIDIA、NVIDIA RTX は、米国およびその他の国における NVIDIA Corp
 承認したものではありません。
 
 ■ このアプリのライセンス
-ソースコードとアプリ本体は MIT License で公開しています(LICENSE を参照)。
-MIT License は nvngx_vsr.dll には適用されません。このリポジトリには NVIDIA RTX Video SDK
+作者が書いた部分は MIT License で公開しています(LICENSE を参照)。
+MIT License は、nvngx_vsr.dll と、HiResLoupe.exe に組み込んだ NVIDIA RTX Video SDK の
+ライブラリ(nvsdk_ngx_s.lib)とサンプルコード(rtx_video_api_dx11_impl.cpp)には
+適用されません。これらは NVIDIA Corporation の著作物で、NVIDIA RTX SDKs LICENSE の
+条件に従います。このリポジトリには NVIDIA RTX Video SDK
 も nvngx_vsr.dll も含まれていません。ビルドするときは、SDK を NVIDIA から入手し、
 その使用許諾に同意してください。
 
