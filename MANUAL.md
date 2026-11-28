@@ -13,7 +13,7 @@ Magnification uses the super resolution of the NVIDIA RTX Video SDK.
 
 No installer: unzip the folder and run `HiResLoupe.exe`.
 
-**Type**: Freeware (free of charge). See "License and third-party components" below.
+**Type**: Freeware (free of charge; donations welcome). See "License and third-party components" below.
 
 ### Requirements
 
@@ -101,6 +101,10 @@ HiResLoupe captures the screen, and uses a mouse hook to follow the pointer and 
 - Bug reports and requests: https://github.com/Nanakagi/HiResLoupe/issues (posting needs a GitHub account)
 - Latest version: https://github.com/Nanakagi/HiResLoupe/releases
 
+### Support
+
+HiResLoupe is free, with no feature limits or trial period. If you would like to support its development, donations are welcome on Ko-fi (optional): https://ko-fi.com/Nanakagi
+
 ### License and third-party components
 
 HiResLoupe is freeware. The code written by the author is released under the MIT License (see `LICENSE`).
@@ -124,7 +128,7 @@ This app is an independent work and is not provided, endorsed or approved by NVI
 
 インストールは要りません。zip を展開して `HiResLoupe.exe` を起動するだけで使えます。
 
-**取り扱い種別**: フリーソフト（無料）。詳しくは下の「ライセンス・同梱物」を見てください。
+**取り扱い種別**: フリーソフト（無料・寄付歓迎）。詳しくは下の「ライセンス・同梱物」を見てください。
 
 ### 必要なもの
 
@@ -211,6 +215,10 @@ HiResLoupe は、画面を取り込み、マウスのフックでポインター
 - メール: codemasa7@hotmail.com
 - 不具合の報告・要望: https://github.com/Nanakagi/HiResLoupe/issues (書き込むには GitHub のアカウントが要ります)
 - 最新版: https://github.com/Nanakagi/HiResLoupe/releases
+
+### 開発を応援する
+
+HiResLoupe は無料で、機能の制限や試用期間はありません。開発を応援していただける方は、Ko-fi で寄付を受け付けています(任意です): https://ko-fi.com/Nanakagi
 
 ### ライセンス・同梱物
 
